@@ -1,26 +1,134 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8f2ee;
+  --foreground: #1d1a19;
+  --panel: #f7f1ee;
+  --panel-strong: #f3e8e2;
+  --line: #eadfd7;
+  --text-muted: #706561;
+  --gold: #d6b07d;
+  --rose: #efd2c9;
+  --blush: #f7e8e2;
+  --button: #1d1a19;
+
+  /* Shared premium-editorial animation system: one easing curve, one set of
+     durations, reused everywhere instead of ad-hoc values per component. */
+  --ease-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 200ms;
+  --duration-base: 450ms;
+  --duration-slow: 650ms;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  scroll-behavior: smooth;
 }
 
 body {
+  margin: 0;
+  min-height: 100vh;
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, sans-serif;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}
+
+.brand-serif {
+  font-family: var(--font-serif), Georgia, serif;
+  letter-spacing: -0.04em;
+}
+
+.brand-serif-italic {
+  font-family: var(--font-serif), Georgia, serif;
+  font-style: italic;
+}
+
+/* Cormorant/Manrope carry no Arabic glyphs, so RTL swaps to the Arabic
+   webfont everywhere instead of silently falling back to a system serif. */
+html[dir="rtl"] body {
+  font-family: var(--font-arabic), Arial, sans-serif;
+}
+
+html[dir="rtl"] .brand-serif,
+html[dir="rtl"] .brand-serif-italic {
+  font-family: var(--font-arabic), Arial, sans-serif;
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+/* ------------------------------------------------------------------------
+   Premium-editorial animation primitives.
+   `.animate-fade-up` / `.animate-fade-in` play once on mount (CSS-only, no
+   JS) — used for above-the-fold content like the hero, where content is
+   visible immediately and shouldn't wait on a scroll observer.
+   `data-reveal` is the scroll-triggered counterpart, driven by the small
+   Reveal/StaggerReveal client components — see components/reveal.tsx.
+   ------------------------------------------------------------------------ */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up var(--duration-slow) var(--ease-premium) both;
+}
+
+.animate-fade-in {
+  animation: fade-in var(--duration-slow) ease-out both;
+}
+
+/* Slow cinematic zoom for the hero banner — plays once on load, alongside
+   .animate-fade-in on the same element, so the hero eases in and settles
+   rather than appearing static. */
+@keyframes hero-zoom {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.animate-hero-zoom {
+  animation: hero-zoom 1.8s var(--ease-premium) both;
+}
+
+/* Respect the user's OS-level motion preference everywhere, not just in the
+   hand-rolled reveal components — this is the universal safety net. Content
+   itself is never hidden by this; only animation/transition timing is cut
+   to effectively nothing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FOR HER
 
-## Getting Started
+Storefront and admin dashboard for a women's fashion e-commerce brand, built with Next.js (App Router) and Supabase.
 
-First, run the development server:
+## Tech stack
+
+- **Framework:** Next.js 15 (App Router), React 19, TypeScript
+- **Styling:** Tailwind CSS 4
+- **Database/storage:** Supabase (Postgres + Storage)
+- **Auth:** Custom session-based auth (argon2 password hashing, hashed session tokens stored in a `sessions` table — not Supabase Auth)
+- **i18n:** Built-in English/Arabic locale switching with RTL support
+
+## Requirements
+
+- Node.js 20+
+- A Supabase project (database + storage bucket for product/category images)
+
+## Environment variables
+
+Copy `.env.example` to `.env.local` and fill in your Supabase project's values:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+cp .env.example .env.local
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon/public key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service-role key — server-only, never exposed to the browser |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Development
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm install
+npm run dev
+```
 
-## Learn More
+Open [http://localhost:3000](http://localhost:3000).
 
-To learn more about Next.js, take a look at the following resources:
+Database migrations live in `supabase/migrations/` and are applied manually in order through the Supabase SQL editor (no CLI migration step in this workflow).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Production build
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+npm run build
+npm run start
+```
 
-## Deploy on Vercel
+## Deployment notes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Set the three environment variables above in the hosting platform's project settings — `SUPABASE_SERVICE_ROLE_KEY` must stay server-only.
+- Run any new files in `supabase/migrations/` against the production database before deploying code that depends on them.
+- `middleware.ts` protects all `/admin/*` routes; confirm an admin-role profile exists before relying on it in production.
