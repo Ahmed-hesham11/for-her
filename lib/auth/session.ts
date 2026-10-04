@@ -18,6 +18,25 @@ export type SessionProfile = {
   role: string;
 };
 
+// middleware.ts already verifies the session (2 Supabase queries) for every
+// /admin/:path* request before the route even renders. Forwarding the
+// result through this request header lets requireAdmin() reuse it instead
+// of repeating the same 2 queries — internal to the request pipeline only,
+// never present on the actual response the browser receives, and always
+// overwritten by middleware itself so a client can't forge it.
+export const ADMIN_SESSION_HEADER = "x-admin-session-user";
+
+export function parseAdminSessionHeader(value: string | null): SessionProfile | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed.id === "string" && typeof parsed.role === "string") return parsed as SessionProfile;
+  } catch {
+    // fall through
+  }
+  return null;
+}
+
 export function sessionCookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
