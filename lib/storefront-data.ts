@@ -55,13 +55,6 @@ export const promoCards = [
   { title: "Gift for Her", subtitle: "The perfect gift for every moment", accent: "#f5e9e1" },
 ];
 
-export const benefits = [
-  { title: "Free Shipping", description: "On orders over $50" },
-  { title: "Easy Returns", description: "14 days return policy" },
-  { title: "Secure Payment", description: "100% secure payment" },
-  { title: "Customer Support", description: "24/7 support" },
-];
-
 export const footerColumns = {
   shop: ["Jewelry", "Accessories", "Bags", "New Arrivals", "Best Sellers", "Sale"],
   customer: ["Shipping & Delivery", "Returns & Exchanges", "FAQ", "Size Guide", "Contact Us"],

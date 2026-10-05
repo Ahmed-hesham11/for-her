@@ -97,7 +97,7 @@ function mapProductRow(item: ProductRow, categoryNames: Map<string, string>): Pr
     originalPrice: item.original_price === null ? null : Number(item.original_price),
     image: item.image_url || FALLBACK_IMAGE,
     category: item.category_id ? categoryNames.get(String(item.category_id)) ?? "Accessories" : "Accessories",
-    description: item.description || "No description available.",
+    description: item.description || "",
     sku: item.sku ?? "",
     stock: Number(item.stock_quantity ?? 0),
   };

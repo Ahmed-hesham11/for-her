@@ -25,7 +25,7 @@ function mapProductRow(row: ProductRow, categoryNames: Map<string, string>) {
     originalPrice: row.original_price === null ? null : Number(row.original_price),
     image: row.image_url || FALLBACK_IMAGE,
     category: row.category_id ? categoryNames.get(String(row.category_id)) ?? "Accessories" : "Accessories",
-    description: row.description || "No description available.",
+    description: row.description || "",
     sku: row.sku ?? "",
     stock: Number(row.stock_quantity ?? 0),
   };
