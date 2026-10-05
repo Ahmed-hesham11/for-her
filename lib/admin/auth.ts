@@ -32,3 +32,15 @@ export async function requireAdmin(): Promise<{ profile: AdminProfile; email: st
 
   return { profile: { id: user.id, full_name: user.full_name, role: user.role }, email: user.email };
 }
+
+// Same forwarded-header fast path as requireAdmin(), plus a super_admin-only
+// gate on top — for pages/actions that can change who else is an admin.
+export async function requireSuperAdmin(): Promise<{ profile: AdminProfile; email: string | null }> {
+  const result = await requireAdmin();
+
+  if (result.profile.role !== "super_admin") {
+    redirect("/admin/unauthorized");
+  }
+
+  return result;
+}

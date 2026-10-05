@@ -9,7 +9,7 @@
 // service-role client, which bypasses RLS, instead of the browser's
 // anon-key client that RLS used to gate via is_admin()/auth.uid().
 
-import { requireAdmin } from "@/lib/admin/auth";
+import { requireAdmin, requireSuperAdmin } from "@/lib/admin/auth";
 import { createCategory, updateCategory, type CategoryInput } from "@/lib/admin/categories";
 import { createCoupon, updateCoupon, deleteCoupon, type CouponInput } from "@/lib/admin/coupons";
 import {
@@ -24,6 +24,7 @@ import { createProduct, updateProduct, setProductActive, type ProductInput } fro
 import { createPurchase, type NewPurchaseItem } from "@/lib/admin/purchases";
 import { updateShippingRates } from "@/lib/admin/shipping";
 import { createSupplier, updateSupplier, type SupplierInput } from "@/lib/admin/suppliers";
+import { setUserRole } from "@/lib/admin/users";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 function requireClient() {
@@ -125,6 +126,11 @@ export async function updateOrderPrintedAction(id: string, printed: boolean) {
 export async function createManualOrderAction(input: ManualOrderInput) {
   await requireAdmin();
   return createManualOrder(requireClient(), input);
+}
+
+export async function setUserRoleAction(targetId: string, newRole: "customer" | "admin") {
+  const { profile } = await requireSuperAdmin();
+  return setUserRole(requireClient(), profile.id, targetId, newRole);
 }
 
 const IMAGE_BUCKET = "catalog-images";

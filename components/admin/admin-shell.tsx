@@ -7,7 +7,7 @@ import { AdminSidebarNav } from "@/components/admin/admin-sidebar-nav";
 import { LogoutButton } from "@/components/admin/logout-button";
 import { cairo } from "@/lib/admin/fonts";
 
-function SidebarContent({ adminName, onNavigate }: { adminName: string; onNavigate?: () => void }) {
+function SidebarContent({ adminName, adminRole, onNavigate }: { adminName: string; adminRole: string; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col">
       <Link href="/admin" className="px-2 pb-6 pt-1">
@@ -16,7 +16,7 @@ function SidebarContent({ adminName, onNavigate }: { adminName: string; onNaviga
       </Link>
 
       <div className="flex-1 overflow-y-auto px-1">
-        <AdminSidebarNav onNavigate={onNavigate} />
+        <AdminSidebarNav role={adminRole} onNavigate={onNavigate} />
       </div>
 
       <div className="mt-4 space-y-3 border-t border-[#eadfd7] px-1 pt-4">
@@ -35,14 +35,14 @@ function SidebarContent({ adminName, onNavigate }: { adminName: string; onNaviga
   );
 }
 
-export function AdminShell({ adminName, children }: { adminName: string; children: React.ReactNode }) {
+export function AdminShell({ adminName, adminRole, children }: { adminName: string; adminRole: string; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div dir="rtl" lang="ar" className={`${cairo.className} min-h-screen bg-[#f8f2ee] text-[#201d1b]`}>
       <div className="mx-auto flex max-w-[1600px]">
         <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-l border-[#eadfd7] bg-[#faf6f3] px-3 py-5 md:flex md:flex-col">
-          <SidebarContent adminName={adminName} />
+          <SidebarContent adminName={adminName} adminRole={adminRole} />
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
@@ -81,7 +81,7 @@ export function AdminShell({ adminName, children }: { adminName: string; childre
             >
               <CloseIcon className="h-4 w-4" />
             </button>
-            <SidebarContent adminName={adminName} onNavigate={() => setMobileOpen(false)} />
+            <SidebarContent adminName={adminName} adminRole={adminRole} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       ) : null}
