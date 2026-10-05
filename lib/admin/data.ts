@@ -19,7 +19,9 @@ export type RevenueSummary = {
   last30Days: number;
 };
 
-export type RevenueByDay = { day: string; revenue: number };
+export type RevenueProfitDay = { day: string; revenue: number; cost: number; profit: number; ordersCount: number };
+
+export type RangeTotals = { revenue: number; cost: number; profit: number; ordersCount: number };
 
 export type RecentOrder = {
   id: string;
@@ -51,7 +53,9 @@ export type TopSellingProduct = {
 export type DashboardOverview = {
   kpis: AdminKpis;
   revenueSummary: RevenueSummary;
-  revenueByDay: RevenueByDay[];
+  revenueProfitByDay: RevenueProfitDay[];
+  rangeTotals: RangeTotals;
+  range: { from: string; to: string };
   recentOrders: RecentOrder[];
   orderStatusCounts: OrderStatusCount[];
   lowStockProducts: LowStockProduct[];
@@ -115,12 +119,15 @@ export async function getRevenueSummary(supabase: SupabaseClient, errors?: strin
   };
 }
 
-export async function getRevenueByDay(supabase: SupabaseClient, daysBack = 14, errors?: string[]): Promise<RevenueByDay[]> {
-  const { data, error } = await supabase.rpc("admin_revenue_by_day", { days_back: daysBack });
-  trackError(errors, "Revenue by day", error);
-  return ((data ?? []) as { day: string; revenue: number }[]).map((row) => ({
+export async function getRevenueProfitByRange(supabase: SupabaseClient, from: string, to: string, errors?: string[]): Promise<RevenueProfitDay[]> {
+  const { data, error } = await supabase.rpc("admin_revenue_profit_by_range", { p_from: from, p_to: to });
+  trackError(errors, "Revenue & profit by range", error);
+  return ((data ?? []) as { day: string; revenue: number; cost: number; profit: number; orders_count: number }[]).map((row) => ({
     day: row.day,
     revenue: Number(row.revenue),
+    cost: Number(row.cost),
+    profit: Number(row.profit),
+    ordersCount: Number(row.orders_count),
   }));
 }
 
@@ -159,18 +166,55 @@ export async function getTopSellingProducts(supabase: SupabaseClient, limit = 5,
   }));
 }
 
-export async function getDashboardOverview(supabase: SupabaseClient): Promise<DashboardOverview> {
-  const errors: string[] = [];
+function isoDate(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
 
-  const [kpis, revenueSummary, revenueByDay, recentOrders, orderStatusCounts, lowStockProducts, topSellingProducts] = await Promise.all([
+// Mirrors admin_revenue_profit_by_range's own defaults (today, and 13 days
+// before it) so "no filter applied" looks identical to the old fixed
+// 14-day chart.
+function defaultRange(): { from: string; to: string } {
+  const to = new Date();
+  const from = new Date(to);
+  from.setUTCDate(from.getUTCDate() - 13);
+  return { from: isoDate(from), to: isoDate(to) };
+}
+
+export async function getDashboardOverview(supabase: SupabaseClient, range?: { from?: string; to?: string }): Promise<DashboardOverview> {
+  const errors: string[] = [];
+  const defaults = defaultRange();
+  const resolvedRange = { from: range?.from || defaults.from, to: range?.to || defaults.to };
+
+  const [kpis, revenueSummary, revenueProfitByDay, recentOrders, orderStatusCounts, lowStockProducts, topSellingProducts] = await Promise.all([
     getAdminKpis(supabase, errors),
     getRevenueSummary(supabase, errors),
-    getRevenueByDay(supabase, 14, errors),
+    getRevenueProfitByRange(supabase, resolvedRange.from, resolvedRange.to, errors),
     getRecentOrders(supabase, 8, errors),
     getOrderStatusCounts(supabase, errors),
     getLowStockProducts(supabase, 8, errors),
     getTopSellingProducts(supabase, 5, errors),
   ]);
 
-  return { kpis: { ...kpis, totalRevenue: revenueSummary.last30Days }, revenueSummary, revenueByDay, recentOrders, orderStatusCounts, lowStockProducts, topSellingProducts, errors };
+  const rangeTotals = revenueProfitByDay.reduce<RangeTotals>(
+    (totals, day) => ({
+      revenue: totals.revenue + day.revenue,
+      cost: totals.cost + day.cost,
+      profit: totals.profit + day.profit,
+      ordersCount: totals.ordersCount + day.ordersCount,
+    }),
+    { revenue: 0, cost: 0, profit: 0, ordersCount: 0 },
+  );
+
+  return {
+    kpis: { ...kpis, totalRevenue: revenueSummary.last30Days },
+    revenueSummary,
+    revenueProfitByDay,
+    rangeTotals,
+    range: resolvedRange,
+    recentOrders,
+    orderStatusCounts,
+    lowStockProducts,
+    topSellingProducts,
+    errors,
+  };
 }
