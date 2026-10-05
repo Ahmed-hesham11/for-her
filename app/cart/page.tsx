@@ -2,12 +2,48 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { memo } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
-import { useCart } from "@/components/cart-provider";
+import { useCart, type CartItem } from "@/components/cart-provider";
 import { AuthGate } from "@/components/auth-gate";
 import { useLocale } from "@/components/locale-provider";
 import { formatEgp } from "@/lib/currency";
+
+const CartLineItem = memo(function CartLineItem({
+  item,
+  eachLabel,
+  removeLabel,
+  onUpdateQuantity,
+  onRemove,
+}: {
+  item: CartItem;
+  eachLabel: string;
+  removeLabel: string;
+  onUpdateQuantity: (productId: string, quantity: number) => void;
+  onRemove: (productId: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4 rounded-[24px] border border-[#ebddd5] bg-[#fdf8f5] p-4 sm:flex-row sm:items-center">
+      <div className="relative h-28 w-full overflow-hidden rounded-[18px] bg-[#f1e7e0] sm:w-28">
+        <Image src={item.image} alt={item.name} fill sizes="(min-width: 640px) 112px, 100vw" className="object-cover" />
+      </div>
+      <div className="flex-1">
+        <h2 className="text-xl font-medium text-[#221d1b]">{item.name}</h2>
+        <p className="mt-1 text-sm text-[#675e5b]">{formatEgp(item.price)} {eachLabel}</p>
+        <div className="mt-3 flex items-center justify-between gap-4">
+          <div className="flex items-center overflow-hidden rounded-full border border-[#e5d7d1] bg-white text-[#2a2221]">
+            <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="h-10 w-10">−</button>
+            <span className="w-10 text-center">{item.quantity}</span>
+            <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="h-10 w-10">+</button>
+          </div>
+          <button type="button" onClick={() => onRemove(item.id)} className="text-sm text-[#9b5d50] underline-offset-2 hover:underline">{removeLabel}</button>
+        </div>
+      </div>
+      <div className="text-left text-xl font-semibold text-[#1d1918] sm:text-right">{formatEgp(item.price * item.quantity)}</div>
+    </div>
+  );
+});
 
 export default function CartPage() {
   const { items, subtotal, isLoading, error, updateQuantity, removeFromCart } = useCart();
@@ -44,24 +80,14 @@ export default function CartPage() {
           <div className="grid gap-8 lg:grid-cols-[1.5fr_0.7fr]">
             <div className="space-y-4">
               {items.map((item) => (
-                <div key={item.id} className="flex flex-col gap-4 rounded-[24px] border border-[#ebddd5] bg-[#fdf8f5] p-4 sm:flex-row sm:items-center">
-                  <div className="relative h-28 w-full overflow-hidden rounded-[18px] bg-[#f1e7e0] sm:w-28">
-                    <Image src={item.image} alt={item.name} fill sizes="(min-width: 640px) 112px, 100vw" className="object-cover" />
-                  </div>
-                  <div className="flex-1">
-                    <h2 className="text-xl font-medium text-[#221d1b]">{item.name}</h2>
-                    <p className="mt-1 text-sm text-[#675e5b]">{formatEgp(item.price)} {t.cart.each}</p>
-                    <div className="mt-3 flex items-center justify-between gap-4">
-                      <div className="flex items-center overflow-hidden rounded-full border border-[#e5d7d1] bg-white text-[#2a2221]">
-                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1)} className="h-10 w-10">−</button>
-                        <span className="w-10 text-center">{item.quantity}</span>
-                        <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1)} className="h-10 w-10">+</button>
-                      </div>
-                      <button type="button" onClick={() => removeFromCart(item.id)} className="text-sm text-[#9b5d50] underline-offset-2 hover:underline">{t.common.remove}</button>
-                    </div>
-                  </div>
-                  <div className="text-left text-xl font-semibold text-[#1d1918] sm:text-right">{formatEgp(item.price * item.quantity)}</div>
-                </div>
+                <CartLineItem
+                  key={item.id}
+                  item={item}
+                  eachLabel={t.cart.each}
+                  removeLabel={t.common.remove}
+                  onUpdateQuantity={updateQuantity}
+                  onRemove={removeFromCart}
+                />
               ))}
             </div>
 
