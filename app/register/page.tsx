@@ -14,7 +14,7 @@ export default function RegisterPage() {
   const { user, isLoading: isAuthLoading, refreshProfile } = useAuth();
   const { t } = useLocale();
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agree, setAgree] = useState(false);
@@ -51,13 +51,13 @@ export default function RegisterPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ full_name: fullName, email, password }),
+        body: JSON.stringify({ full_name: fullName, phone_1: phone, password }),
       });
       const body = await response.json();
 
       if (!response.ok) {
         if (response.status === 409) {
-          throw new Error(t.auth.emailExists);
+          throw new Error(t.auth.phoneExists);
         }
         throw new Error(body.error ?? "Unable to create your account right now.");
       }
@@ -96,13 +96,16 @@ export default function RegisterPage() {
         </label>
 
         <label className="block space-y-1.5 text-sm text-[#4e4442]">
-          <span className="text-[0.72rem] uppercase tracking-[0.08em] text-[#7a6762]">{t.auth.email}</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.08em] text-[#7a6762]">{t.auth.phone}</span>
           <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            type="tel"
+            inputMode="numeric"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
             className="w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]"
-            placeholder="you@example.com"
+            placeholder="01xxxxxxxxx"
+            pattern="01[0125][0-9]{8}"
+            title="Egyptian mobile number, e.g. 01012345678"
             required
           />
         </label>

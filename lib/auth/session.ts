@@ -14,7 +14,7 @@ const SESSION_REFRESH_THRESHOLD_MS = 24 * 60 * 60 * 1000; // 1 day
 export type SessionProfile = {
   id: string;
   full_name: string;
-  email: string;
+  email: string | null;
   role: string;
 };
 

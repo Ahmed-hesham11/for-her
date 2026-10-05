@@ -20,7 +20,7 @@ function LoginPageContent() {
   const searchParams = useSearchParams();
   const { user, isLoading: isAuthLoading, refreshProfile } = useAuth();
   const { t } = useLocale();
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +40,7 @@ function LoginPageContent() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ phone_1: phone, password }),
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.error ?? "Unable to sign in right now.");
@@ -63,13 +63,14 @@ function LoginPageContent() {
     <AuthShell eyebrow={t.auth.welcomeBack} title={t.auth.signInTitle} description={t.auth.signInDesc}>
       <form className="space-y-4" onSubmit={handleSubmit}>
         <label className="block space-y-1.5 text-sm text-[#4e4442]">
-          <span className="text-[0.72rem] uppercase tracking-[0.08em] text-[#7a6762]">{t.auth.email}</span>
+          <span className="text-[0.72rem] uppercase tracking-[0.08em] text-[#7a6762]">{t.auth.phone}</span>
           <input
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            type="tel"
+            inputMode="numeric"
+            value={phone}
+            onChange={(event) => setPhone(event.target.value)}
             className="w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]"
-            placeholder="you@example.com"
+            placeholder="01xxxxxxxxx"
             required
           />
         </label>

@@ -10,7 +10,7 @@ export type Profile = {
 
 export type SessionUser = {
   id: string;
-  email: string;
+  email: string | null;
 };
 
 type AuthContextValue = {
@@ -24,7 +24,7 @@ type AuthContextValue = {
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 type MeResponse = {
-  user: { id: string; full_name: string; email: string; role: string } | null;
+  user: { id: string; full_name: string; email: string | null; role: string } | null;
 };
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

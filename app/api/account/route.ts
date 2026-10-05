@@ -40,6 +40,11 @@ export async function PATCH(request: Request) {
     })
     .eq("id", user.id);
 
-  if (error) return NextResponse.json({ error: "Unable to update your profile right now." }, { status: 500 });
+  if (error) {
+    if (error.code === "23505") {
+      return NextResponse.json({ error: "This phone number is already used by another account." }, { status: 409 });
+    }
+    return NextResponse.json({ error: "Unable to update your profile right now." }, { status: 500 });
+  }
   return NextResponse.json({ ok: true });
 }

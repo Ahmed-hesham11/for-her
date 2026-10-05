@@ -28,7 +28,7 @@ export default async function AccountPage() {
           <div>
             <p className="text-[0.7rem] uppercase tracking-[0.22em] text-[#7a6762]">{t.auth.accountEyebrow}</p>
             <h1 className="mt-2 brand-serif text-[3rem] leading-none text-[#1d1918]">{t.auth.myProfile}</h1>
-            <p className="mt-2 text-sm text-[#625b58]">{user.email}</p>
+            <p className="mt-2 text-sm text-[#625b58]">{profile?.phone_1}</p>
           </div>
           <LogoutButton className="rounded-full border border-[#e5d7d1] bg-white/60 px-5 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#4a4442] transition hover:bg-[#f2e7df]" label={t.header.logOut} />
         </div>
