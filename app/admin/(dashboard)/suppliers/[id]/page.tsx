@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
+import { DashboardSection } from "@/components/admin/dashboard-section";
 import { ErrorState } from "@/components/admin/empty-state";
 import { SupplierForm } from "@/components/admin/supplier-form";
+import { SupplierProductsTable } from "@/components/admin/supplier-products-table";
+import { getProductsSuppliedBySupplier } from "@/lib/admin/purchases";
 import { getAdminSupplierById } from "@/lib/admin/suppliers";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -21,6 +24,8 @@ export default async function EditSupplierPage({
     notFound();
   }
 
+  const suppliedProducts = await getProductsSuppliedBySupplier(supabase, id);
+
   return (
     <div className="space-y-6">
       <div>
@@ -39,6 +44,14 @@ export default async function EditSupplierPage({
           is_active: supplier.is_active,
         }}
       />
+
+      {suppliedProducts.error ? (
+        <ErrorState message={`تعذّر تحميل منتجات هذا المورد: ${suppliedProducts.error}`} />
+      ) : (
+        <DashboardSection title={`المنتجات التي يورّدها (${suppliedProducts.products.length})`}>
+          <SupplierProductsTable products={suppliedProducts.products} />
+        </DashboardSection>
+      )}
     </div>
   );
 }

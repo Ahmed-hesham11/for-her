@@ -108,6 +108,83 @@ export async function getAdminPurchaseById(supabase: SupabaseClient, id: string)
   return { purchase, items: mappedItems };
 }
 
+export type SuppliedProduct = {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  is_active: boolean;
+  total_quantity: number;
+  purchase_count: number;
+  last_purchase_date: string;
+};
+
+// Products have no supplier_id of their own — a supplier's product list is
+// derived from purchase history (distinct products across every purchase
+// placed with that supplier), not a direct column anywhere.
+export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, supplierId: string): Promise<{ products: SuppliedProduct[]; error: string | null }> {
+  const { data: purchases, error: purchasesError } = await supabase
+    .from("purchases")
+    .select("id, purchase_date")
+    .eq("supplier_id", supplierId);
+
+  if (purchasesError) return { products: [], error: purchasesError.message };
+  if (!purchases || purchases.length === 0) return { products: [], error: null };
+
+  const purchaseDateById = new Map((purchases as { id: string; purchase_date: string }[]).map((row) => [row.id, row.purchase_date]));
+  const purchaseIds = Array.from(purchaseDateById.keys());
+
+  const { data: items, error: itemsError } = await supabase
+    .from("purchase_items")
+    .select("purchase_id, product_id, quantity, products(name, sku, is_active)")
+    .in("purchase_id", purchaseIds);
+
+  if (itemsError) return { products: [], error: itemsError.message };
+
+  type ItemRow = {
+    purchase_id: string;
+    product_id: string;
+    quantity: number;
+    products: { name: string; sku: string | null; is_active: boolean } | { name: string; sku: string | null; is_active: boolean }[] | null;
+  };
+
+  const byProduct = new Map<string, SuppliedProduct>();
+  const purchaseIdsByProduct = new Map<string, Set<string>>();
+
+  for (const row of (items ?? []) as unknown as ItemRow[]) {
+    const product = firstOrNull(row.products);
+    if (!product) continue;
+
+    const purchaseDate = purchaseDateById.get(row.purchase_id) ?? "";
+    const existing = byProduct.get(row.product_id);
+    if (existing) {
+      existing.total_quantity += Number(row.quantity);
+      if (purchaseDate > existing.last_purchase_date) existing.last_purchase_date = purchaseDate;
+    } else {
+      byProduct.set(row.product_id, {
+        product_id: row.product_id,
+        product_name: product.name,
+        sku: product.sku,
+        is_active: product.is_active,
+        total_quantity: Number(row.quantity),
+        purchase_count: 0,
+        last_purchase_date: purchaseDate,
+      });
+    }
+
+    const purchaseSet = purchaseIdsByProduct.get(row.product_id) ?? new Set<string>();
+    purchaseSet.add(row.purchase_id);
+    purchaseIdsByProduct.set(row.product_id, purchaseSet);
+  }
+
+  const products = Array.from(byProduct.values()).map((product) => ({
+    ...product,
+    purchase_count: purchaseIdsByProduct.get(product.product_id)?.size ?? 0,
+  }));
+  products.sort((a, b) => b.last_purchase_date.localeCompare(a.last_purchase_date));
+
+  return { products, error: null };
+}
+
 export type NewPurchaseItem = { product_id: string; quantity: number; unit_cost: number };
 
 export async function createPurchase(
