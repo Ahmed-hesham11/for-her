@@ -3,11 +3,12 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/admin/orders";
+import type { CategoryTreeOption } from "@/lib/admin/products";
 import { ORDER_STATUS_LABELS_AR, PAYMENT_STATUS_LABELS_AR } from "@/lib/admin/status-labels-ar";
 
 const SELECT_CLASS = "rounded-full border border-[#e4d4cd] bg-white px-4 py-2 text-sm text-[#2f2725] outline-none focus:border-[#c8a78f]";
 
-export function OrderFilters() {
+export function OrderFilters({ categories }: { categories: CategoryTreeOption[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -43,6 +44,13 @@ export function OrderFilters() {
         <option value="">كل الحالات</option>
         {ORDER_STATUSES.map((status) => (
           <option key={status} value={status}>{ORDER_STATUS_LABELS_AR[status] ?? status}</option>
+        ))}
+      </select>
+
+      <select className={SELECT_CLASS} defaultValue={searchParams.get("category") ?? ""} onChange={(event) => updateParam("category", event.target.value)}>
+        <option value="">كل الفئات</option>
+        {categories.map((category) => (
+          <option key={category.id} value={category.id}>{category.name}</option>
         ))}
       </select>
 

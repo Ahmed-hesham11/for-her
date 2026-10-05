@@ -5,6 +5,7 @@ import { OrderFilters } from "@/components/admin/order-filters";
 import { OrdersTable } from "@/components/admin/orders-table";
 import { Pagination } from "@/components/admin/pagination";
 import { getAdminOrders } from "@/lib/admin/orders";
+import { getCategoryOptions } from "@/lib/admin/products";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function AdminOrdersPage({
@@ -21,15 +22,19 @@ export default async function AdminOrdersPage({
 
   const page = Math.max(1, Number(params.page) || 1);
 
-  const result = await getAdminOrders(supabase, {
-    search: params.search,
-    status: params.status,
-    paymentStatus: params.payment,
-    dateFrom: params.from,
-    dateTo: params.to,
-    page,
-    pageSize: 20,
-  });
+  const [categories, result] = await Promise.all([
+    getCategoryOptions(supabase),
+    getAdminOrders(supabase, {
+      search: params.search,
+      status: params.status,
+      paymentStatus: params.payment,
+      categoryId: params.category,
+      dateFrom: params.from,
+      dateTo: params.to,
+      page,
+      pageSize: 20,
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -47,7 +52,7 @@ export default async function AdminOrdersPage({
       </div>
 
       <DashboardSection title="عوامل التصفية">
-        <OrderFilters />
+        <OrderFilters categories={categories} />
       </DashboardSection>
 
       {result.error ? (

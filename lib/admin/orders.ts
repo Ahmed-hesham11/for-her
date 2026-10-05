@@ -45,6 +45,7 @@ export type OrderListParams = {
   search?: string;
   status?: string;
   paymentStatus?: string;
+  categoryId?: string;
   dateFrom?: string;
   dateTo?: string;
   sortDir?: "asc" | "desc";
@@ -66,7 +67,22 @@ export async function getAdminOrders(supabase: SupabaseClient, params: OrderList
   const page = Math.max(1, params.page ?? 1);
   const pageSize = params.pageSize ?? 20;
 
+  let categoryOrderIds: string[] | null = null;
+  if (params.categoryId) {
+    const { data, error } = await supabase
+      .from("order_items")
+      .select("order_id, products!inner(category_id)")
+      .eq("products.category_id", params.categoryId);
+    if (error) return { orders: [], total: 0, page, pageSize, error: error.message };
+    categoryOrderIds = [...new Set(((data ?? []) as { order_id: string }[]).map((row) => row.order_id))];
+    if (categoryOrderIds.length === 0) {
+      return { orders: [], total: 0, page, pageSize, error: null };
+    }
+  }
+
   let query = supabase.from("orders").select(ORDER_SELECT, { count: "exact" });
+
+  if (categoryOrderIds) query = query.in("id", categoryOrderIds);
 
   if (params.search) {
     const term = params.search.trim();
