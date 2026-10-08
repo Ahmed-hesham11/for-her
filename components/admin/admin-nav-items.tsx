@@ -2,6 +2,7 @@ import {
   BoxIcon,
   ClipboardIcon,
   GridIcon,
+  LayersIcon,
   PinIcon,
   ReceiptIcon,
   TagIcon,
@@ -28,6 +29,7 @@ export const adminNavItems: AdminNavItem[] = [
   { href: "/admin/users", label: "المستخدمون", icon: UserIcon, superAdminOnly: true },
   { href: "/admin/suppliers", label: "الموردين", icon: TruckIcon },
   { href: "/admin/purchases", label: "المشتريات", icon: ClipboardIcon },
+  { href: "/admin/inventory", label: "المخزون", icon: LayersIcon },
   { href: "/admin/coupons", label: "الكوبونات", icon: TicketIcon },
   { href: "/admin/shipping", label: "الشحن", icon: PinIcon },
 ];

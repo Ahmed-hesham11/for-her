@@ -197,9 +197,10 @@ export type ProductInput = {
 // stock_quantity and purchase_price are intentionally NOT part of this
 // input — neither is ever set directly from the product form. stock_quantity
 // starts at 0 for a new product and purchase_price starts at 0; from then on
-// both are only ever changed by Purchases (admin_create_purchase credits the
-// stock and records the latest unit cost as purchase_price) and, for
-// stock_quantity, customer orders (via create_secure_order).
+// purchase_price only ever changes via Purchases (admin_create_purchase
+// records the latest unit cost), and stock_quantity only ever changes via
+// Purchases, customer orders (create_secure_order), and manual recounts on
+// the Inventory page (setProductStock, below).
 export async function createProduct(supabase: SupabaseClient, input: ProductInput): Promise<{ id: string | null; error: string | null }> {
   const { data, error } = await supabase
     .from("products")
@@ -246,5 +247,14 @@ export async function updateProduct(supabase: SupabaseClient, id: string, input:
 
 export async function setProductActive(supabase: SupabaseClient, id: string, isActive: boolean): Promise<{ error: string | null }> {
   const { error } = await supabase.from("products").update({ is_active: isActive }).eq("id", id);
+  return { error: error?.message ?? null };
+}
+
+// Backs the Inventory page's manual recount — directly overwrites
+// stock_quantity instead of crediting/debiting it, for correcting the count
+// to match a physical stock-take.
+export async function setProductStock(supabase: SupabaseClient, id: string, quantity: number): Promise<{ error: string | null }> {
+  if (!Number.isInteger(quantity) || quantity < 0) return { error: "Quantity must be a non-negative whole number." };
+  const { error } = await supabase.from("products").update({ stock_quantity: quantity }).eq("id", id);
   return { error: error?.message ?? null };
 }

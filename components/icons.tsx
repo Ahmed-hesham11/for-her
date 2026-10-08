@@ -77,6 +77,16 @@ export function BoxIcon({ className = "h-4 w-4" }: { className?: string }) {
   );
 }
 
+export function LayersIcon({ className = "h-4 w-4" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">
+      <path d="M12 3.5 20.5 8 12 12.5 3.5 8 12 3.5Z" strokeLinejoin="round" />
+      <path d="M3.5 12 12 16.5 20.5 12" strokeLinejoin="round" />
+      <path d="M3.5 16 12 20.5 20.5 16" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function TagIcon({ className = "h-4 w-4" }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className} aria-hidden="true">

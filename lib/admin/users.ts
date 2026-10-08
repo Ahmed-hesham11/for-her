@@ -57,6 +57,12 @@ export async function getAdminUsers(supabase: SupabaseClient, params: UserListPa
   };
 }
 
+export async function getAdminUserById(supabase: SupabaseClient, id: string): Promise<AdminUser | null> {
+  const { data, error } = await supabase.from("profiles").select("id, full_name, email, phone_1, role, created_at").eq("id", id).maybeSingle();
+  if (error || !data) return null;
+  return data as AdminUser;
+}
+
 // admin_set_user_role raises these as plain exception messages (see
 // supabase/migrations/20261006010000_admin_user_roles.sql) — map them to
 // Arabic here so the dashboard doesn't surface a raw error code.
