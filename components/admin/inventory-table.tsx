@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { setProductStockAction } from "@/lib/admin/actions";
 import type { AdminProduct } from "@/lib/admin/products";
 
+const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=200&q=80";
+
 function InventoryRow({ product }: { product: AdminProduct }) {
   const router = useRouter();
   const [value, setValue] = useState(String(product.stock_quantity));
@@ -36,6 +38,12 @@ function InventoryRow({ product }: { product: AdminProduct }) {
 
   return (
     <tr>
+      <td className="px-4 py-3">
+        <div className="h-12 w-12 overflow-hidden rounded-[10px] bg-[#f1e7e0]">
+          {/* eslint-disable-next-line @next/next/no-img-element -- admin-entered URLs can be from any host, not just the allow-listed images.unsplash.com */}
+          <img src={product.image_url || FALLBACK_IMAGE} alt={product.name} className="h-full w-full object-cover" />
+        </div>
+      </td>
       <td className="px-4 py-3 font-medium text-[#221d1b]">{product.name}</td>
       <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{product.sku}</td>
       <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.category_name}</td>
@@ -85,7 +93,7 @@ export function InventoryTable({ products }: { products: AdminProduct[] }) {
   }
 
   return (
-    <AdminTable headers={["المنتج", "الرمز", "الفئة", "الحالة", "الكمية الفعلية"]}>
+    <AdminTable headers={["الصورة", "المنتج", "الرمز", "الفئة", "الحالة", "الكمية الفعلية"]}>
       {products.map((product) => (
         <InventoryRow key={product.id} product={product} />
       ))}
