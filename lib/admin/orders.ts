@@ -21,6 +21,12 @@ export type AdminOrderListItem = {
   printed: boolean;
   source: string;
   item_count: number;
+  // How many orders (of any source — website, social, manual) share this
+  // same phone_1. There's no single customer id spanning every order type —
+  // website orders always carry a real user_id, social/manual ones never do
+  // — so phone number is the only field that reliably groups "the same
+  // person" across all of them.
+  order_count: number;
 };
 
 export type AdminOrderDetail = AdminOrderListItem & {
@@ -32,7 +38,9 @@ export type AdminOrderDetail = AdminOrderListItem & {
 
 export type AdminOrderItem = {
   id: string;
-  product_id: string;
+  // Null for a custom (off-catalog) line — see
+  // 20261008010000_manual_order_custom_items.sql.
+  product_id: string | null;
   product_name: string;
   sku: string | null;
   quantity: number;
@@ -118,8 +126,21 @@ export async function getAdminOrders(supabase: SupabaseClient, params: OrderList
     }
   }
 
+  const orderCountByPhone = new Map<string, number>();
+  const phones = [...new Set(orders.map((order) => order.phone_1).filter(Boolean))];
+  if (phones.length > 0) {
+    const { data: phoneRows } = await supabase.from("orders").select("phone_1").in("phone_1", phones);
+    for (const row of (phoneRows ?? []) as { phone_1: string }[]) {
+      orderCountByPhone.set(row.phone_1, (orderCountByPhone.get(row.phone_1) ?? 0) + 1);
+    }
+  }
+
   return {
-    orders: orders.map((order) => ({ ...order, item_count: itemCounts.get(order.id) ?? 0 })),
+    orders: orders.map((order) => ({
+      ...order,
+      item_count: itemCounts.get(order.id) ?? 0,
+      order_count: orderCountByPhone.get(order.phone_1) ?? 1,
+    })),
     total: count ?? 0,
     page,
     pageSize,
@@ -136,15 +157,28 @@ export async function getAdminOrderById(supabase: SupabaseClient, id: string): P
 
   if (error || !order) return null;
 
+  const { count: orderCount } = await supabase
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("phone_1", order.phone_1);
+
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, product_id, product_name, sku, quantity, unit_price, total_price, products(image_url)")
+    .select("id, product_id, product_name, sku, quantity, unit_price, total_price, image_url, products(image_url)")
     .eq("order_id", id)
     .order("created_at", { ascending: true });
 
-  const mappedItems = ((items ?? []) as unknown as (Omit<AdminOrderItem, "image_url"> & { products: { image_url: string | null } | { image_url: string | null }[] | null })[]).map((item) => {
+  type ItemRow = Omit<AdminOrderItem, "image_url"> & {
+    image_url: string | null;
+    products: { image_url: string | null } | { image_url: string | null }[] | null;
+  };
+
+  // A custom line's own image_url (set at order time, since there's no
+  // products row to join) wins; a catalog line always has a null image_url
+  // of its own, so it falls back to the joined product's current image.
+  const mappedItems = ((items ?? []) as unknown as ItemRow[]).map((item) => {
     const product = Array.isArray(item.products) ? (item.products[0] ?? null) : item.products;
-    return { ...item, image_url: product?.image_url ?? null };
+    return { ...item, image_url: item.image_url ?? product?.image_url ?? null };
   });
 
   // Older rows created before the request_id column existed may still carry
@@ -152,7 +186,10 @@ export async function getAdminOrderById(supabase: SupabaseClient, id: string): P
   // real customer note, so it's never worth showing here.
   const notes = order.notes?.startsWith("checkout-request:") ? null : order.notes;
 
-  return { order: { ...order, notes, item_count: mappedItems.length } as AdminOrderDetail, items: mappedItems };
+  return {
+    order: { ...order, notes, item_count: mappedItems.length, order_count: orderCount ?? 1 } as AdminOrderDetail,
+    items: mappedItems,
+  };
 }
 
 // Backs the bulk print page (/admin/orders/print?ids=...) — one call per
@@ -185,14 +222,16 @@ export async function updateOrderPrinted(supabase: SupabaseClient, id: string, p
 }
 
 // A line is either an existing catalog product (product_id set, custom_name/
-// unit_price ignored) or a one-off item that isn't in the catalog at all —
-// sold once through a DM/comment and never listed on the storefront
-// (product_id null, custom_name + unit_price required instead). It never
-// touches stock_quantity, since there's no product row behind it.
+// unit_price/image_url ignored) or a one-off item that isn't in the catalog
+// at all — sold once through a DM/comment and never listed on the
+// storefront (product_id null, custom_name + unit_price required instead,
+// image_url optional since there's no products row to source a photo from).
+// It never touches stock_quantity, since there's no product row behind it.
 export type NewManualOrderItem = {
   product_id: string | null;
   custom_name: string | null;
   unit_price: number | null;
+  image_url: string | null;
   quantity: number;
 };
 

@@ -6,6 +6,7 @@ import type { CategoryTreeOption, ProductInput } from "@/lib/admin/products";
 import { createProductAction, updateProductAction, uploadCatalogImageAction } from "@/lib/admin/actions";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ProductGalleryField, type GalleryImageSlot } from "@/components/admin/product-gallery-field";
+import { ProductStockField } from "@/components/admin/product-stock-field";
 
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]";
 const LABEL_CLASS = "text-[0.72rem] text-[#7a6762]";
@@ -194,13 +195,7 @@ export function ProductForm({
 
       <div className="grid gap-4 md:grid-cols-2">
         {productId ? (
-          <div className="space-y-1.5 text-sm text-[#4e4442]">
-            <span className={LABEL_CLASS}>المخزون الحالي</span>
-            <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-3 text-sm text-[#5c524e]">
-              {currentStock ?? 0} في المخزون
-            </div>
-            <p className="text-xs text-[#8a7c78]">يُحدَّد عبر المشتريات (المخزون المستلم) وطلبات العملاء — لا يمكن تعديله هنا.</p>
-          </div>
+          <ProductStockField productId={productId} currentStock={currentStock ?? 0} />
         ) : (
           <div className="space-y-1.5 text-sm text-[#4e4442]">
             <span className={LABEL_CLASS}>كمية المخزون</span>

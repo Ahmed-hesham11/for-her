@@ -1,15 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { FacebookIcon, InstagramIcon, TikTokIcon, WhatsAppIcon } from "@/components/icons";
 import { useLocale } from "@/components/locale-provider";
-
-export const SOCIAL_LINKS = [
-  { label: "Instagram", href: "https://www.instagram.com/forher_272?stkn=MWQwcW10ZWc5cWlhMA%3D%3D&utm_source=qr", Icon: InstagramIcon },
-  { label: "Facebook", href: "https://www.facebook.com/share/19Sze6D5LZ/?mibextid=wwXIfr", Icon: FacebookIcon },
-  { label: "TikTok", href: "https://www.tiktok.com/@forher_272?_r=1&_t=ZS-99ozpDmcKkm", Icon: TikTokIcon },
-  { label: "WhatsApp", href: "https://wa.me/201035109074", Icon: WhatsAppIcon },
-];
+import { SOCIAL_LINKS } from "@/lib/social-links";
 
 export function SiteFooter() {
   const { t } = useLocale();

@@ -96,6 +96,7 @@ export default async function AdminOrderDetailPage({
             <div className="space-y-2 text-sm text-[#4a4442]">
               <p><span className="font-medium text-[#221d1b]">الاسم:</span> {order.customer_name}</p>
               <p><span className="font-medium text-[#221d1b]">الهاتف:</span> {order.phone_1}{order.phone_2 ? ` / ${order.phone_2}` : ""}</p>
+              <p><span className="font-medium text-[#221d1b]">عدد الطلبات:</span> {order.order_count}{order.order_count > 1 ? " (عميل متكرر)" : " (طلب أول مرة)"}</p>
               <p><span className="font-medium text-[#221d1b]">المحافظة:</span> {order.governorate}</p>
               <p><span className="font-medium text-[#221d1b]">العنوان:</span> {order.address}</p>
               <p><span className="font-medium text-[#221d1b]">المصدر:</span> {ORDER_SOURCE_LABELS_AR[order.source] ?? order.source}</p>

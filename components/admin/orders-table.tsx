@@ -70,6 +70,7 @@ export function OrdersTable({ orders }: { orders: AdminOrderListItem[] }) {
                 {order.source === "social" ? <span className="rounded-full bg-[#e6e0f5] px-2 py-0.5 text-[0.58rem] font-medium text-[#4e3d80]">سوشيال</span> : null}
               </p>
               <p className="text-xs text-[#8a7c78]">{order.phone_1}</p>
+              <p className="text-xs text-[#8a7c78]">{order.order_count > 1 ? `عميل متكرر — ${order.order_count} طلبات` : "طلب أول مرة"}</p>
             </td>
             <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{new Date(order.created_at).toLocaleDateString()}</td>
             <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{order.item_count}</td>

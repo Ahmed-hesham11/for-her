@@ -2,8 +2,9 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createManualOrderAction } from "@/lib/admin/actions";
+import { createManualOrderAction, uploadCatalogImageAction } from "@/lib/admin/actions";
 import type { ProductPricedOption } from "@/lib/admin/products";
+import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ProductPicker } from "@/components/admin/product-picker";
 import type { AdminShippingRate } from "@/lib/admin/shipping";
 import { formatEgp } from "@/lib/currency";
@@ -17,11 +18,22 @@ type LineItem = {
   product_id: string;
   customName: string;
   customPrice: number;
+  customImageUrl: string;
+  customImageFile: File | null;
   quantity: number;
 };
 
 function emptyLine(): LineItem {
-  return { key: crypto.randomUUID(), isCustom: false, product_id: "", customName: "", customPrice: 0, quantity: 1 };
+  return {
+    key: crypto.randomUUID(),
+    isCustom: false,
+    product_id: "",
+    customName: "",
+    customPrice: 0,
+    customImageUrl: "",
+    customImageFile: null,
+    quantity: 1,
+  };
 }
 
 export function SocialOrderForm({ products, shippingRates }: { products: ProductPricedOption[]; shippingRates: AdminShippingRate[] }) {
@@ -61,6 +73,25 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
     setIsSaving(true);
 
     try {
+      // A custom line's image only actually uploads here, on save — same
+      // deferred-upload pattern as ProductForm's cover image.
+      const items = await Promise.all(
+        lines.map(async (line) => {
+          if (!line.isCustom) {
+            return { product_id: line.product_id, custom_name: null, unit_price: null, image_url: null, quantity: line.quantity };
+          }
+
+          let imageUrl = line.customImageUrl || null;
+          if (line.customImageFile) {
+            const { url, error: uploadError } = await uploadCatalogImageAction(line.customImageFile, "orders");
+            if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع صورة هذا المنتج الآن.");
+            imageUrl = url;
+          }
+
+          return { product_id: null, custom_name: line.customName, unit_price: line.customPrice, image_url: imageUrl, quantity: line.quantity };
+        }),
+      );
+
       const { id, error: createError } = await createManualOrderAction({
         customer_name: customerName,
         phone_1: phone1,
@@ -70,11 +101,7 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
         payment_method: paymentMethod,
         notes,
         discount: 0,
-        items: lines.map((line) =>
-          line.isCustom
-            ? { product_id: null, custom_name: line.customName, unit_price: line.customPrice, quantity: line.quantity }
-            : { product_id: line.product_id, custom_name: null, unit_price: null, quantity: line.quantity },
-        ),
+        items,
       });
       if (createError || !id) throw new Error(createError ?? "تعذّر تسجيل الطلب.");
       router.push(`/admin/orders/${id}`);
@@ -136,7 +163,16 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
                     <input
                       type="checkbox"
                       checked={line.isCustom}
-                      onChange={(event) => updateLine(line.key, { isCustom: event.target.checked, product_id: "", customName: "", customPrice: 0 })}
+                      onChange={(event) =>
+                        updateLine(line.key, {
+                          isCustom: event.target.checked,
+                          product_id: "",
+                          customName: "",
+                          customPrice: 0,
+                          customImageUrl: "",
+                          customImageFile: null,
+                        })
+                      }
                       className="h-3.5 w-3.5 accent-[#1d1a19]"
                     />
                     منتج جديد (مش موجود في الموقع)
@@ -183,6 +219,14 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
                     <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-2.5 text-sm text-[#5c524e]">
                       {formatEgp(line.customPrice * line.quantity)}
                     </div>
+                    <div className="sm:col-span-4">
+                      <ImageUploadField
+                        label="صورة المنتج (اختياري)"
+                        value={line.customImageUrl}
+                        onChange={(url) => updateLine(line.key, { customImageUrl: url, customImageFile: null })}
+                        onFileSelected={(file) => updateLine(line.key, { customImageFile: file })}
+                      />
+                    </div>
                   </div>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-[1fr_90px_110px] sm:items-center">
@@ -190,7 +234,6 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
                     <input
                       type="number"
                       min="1"
-                      max={product?.stock_quantity ?? undefined}
                       step="1"
                       value={line.quantity}
                       onChange={(event) => updateLine(line.key, { quantity: Number(event.target.value) })}

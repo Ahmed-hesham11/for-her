@@ -1,11 +1,12 @@
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { SiteFooter, SOCIAL_LINKS } from "@/components/site-footer";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { ProductCard } from "@/components/product-card";
 import { CategorySidebar } from "@/components/category-sidebar";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
+import { SOCIAL_LINKS } from "@/lib/social-links";
 import { getCategories, getProducts } from "@/lib/storefront-data-server";
 import { productMatchesNames, resolveCategoryProductNames } from "@/lib/storefront-data";
 

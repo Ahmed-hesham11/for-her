@@ -23,7 +23,6 @@ export function ProductDetailClient({
   const router = useRouter();
   const isOnOffer = product.originalPrice !== null && product.originalPrice > product.price;
   const discountPercent = isOnOffer ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0;
-  const isOutOfStock = product.stock === 0;
   // Matches the admin dashboard's low-stock threshold (lib/admin/products.ts)
   // — kept as a separate constant here to avoid pulling the admin module
   // (and its Supabase dependency) into the storefront client bundle.
@@ -59,13 +58,6 @@ export function ProductDetailClient({
               <span className="absolute start-4 top-4 rounded-full bg-gradient-to-r from-[#c17a5e] to-[#9c4a37] px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.06em] text-white shadow-[0_4px_14px_rgba(156,74,55,0.4)]">
                 -{discountPercent}%
               </span>
-            ) : null}
-            {isOutOfStock ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-[#1d1918]/45 backdrop-blur-[1px]">
-                <span className="rounded-full bg-white/95 px-4 py-2 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#1d1918]">
-                  {t.common.outOfStock}
-                </span>
-              </div>
             ) : null}
           </div>
 
@@ -115,16 +107,14 @@ export function ProductDetailClient({
               <button
                 type="button"
                 onClick={() => addToCart(product, quantity)}
-                disabled={isOutOfStock}
-                className="flex-1 rounded-full bg-[#1d1a19] px-6 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#332d2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                className="flex-1 rounded-full bg-[#1d1a19] px-6 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#332d2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0"
               >
                 {t.common.addToCart}
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
-                disabled={isOutOfStock}
-                className="rounded-full border border-[#221d1b] px-6 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#1d1a19] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f6ebe5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+                className="rounded-full border border-[#221d1b] px-6 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#1d1a19] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f6ebe5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0"
               >
                 {t.productDetail.buyNow}
               </button>

@@ -63,10 +63,9 @@ export default function WishlistPage() {
                       <button
                         type="button"
                         onClick={() => addToCart(item)}
-                        disabled={item.stock === 0}
-                        className="flex-1 rounded-full bg-[#1d1a19] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#332d2b] disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex-1 rounded-full bg-[#1d1a19] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#332d2b]"
                       >
-                        {item.stock === 0 ? t.common.outOfStock : t.common.addToCart}
+                        {t.common.addToCart}
                       </button>
                       <button
                         type="button"

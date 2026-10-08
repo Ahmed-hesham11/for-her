@@ -167,15 +167,16 @@ export async function getProductOptions(supabase: SupabaseClient): Promise<Produ
 
 export type ProductPricedOption = { id: string; name: string; selling_price: number; stock_quantity: number; image_url: string | null };
 
-// Only active, in-stock products — this backs the manual/social order form's
-// product picker, where showing an inactive or out-of-stock item would just
-// invite a submit that the admin_create_manual_order RPC rejects anyway.
+// Only active products — this backs the manual/social order form's product
+// picker. Out-of-stock ones are deliberately still included: an order can be
+// placed regardless (see 20261008030000_allow_ordering_when_out_of_stock.sql),
+// since the admin may know real stock exists even when the recorded count
+// hasn't caught up yet.
 export async function getActiveProductOptions(supabase: SupabaseClient): Promise<ProductPricedOption[]> {
   const { data } = await supabase
     .from("products")
     .select("id, name, selling_price, stock_quantity, image_url")
     .eq("is_active", true)
-    .gt("stock_quantity", 0)
     .order("name", { ascending: true });
   return ((data ?? []) as { id: string; name: string; selling_price: number; stock_quantity: number; image_url: string | null }[]).map((row) => ({
     ...row,
