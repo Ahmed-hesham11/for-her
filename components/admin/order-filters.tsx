@@ -8,11 +8,21 @@ import { ORDER_STATUS_LABELS_AR, PAYMENT_STATUS_LABELS_AR } from "@/lib/admin/st
 
 const SELECT_CLASS = "rounded-full border border-[#e4d4cd] bg-white px-4 py-2 text-sm text-[#2f2725] outline-none focus:border-[#c8a78f]";
 
+// Local calendar date, not UTC — toISOString() would roll over a day early
+// for anyone west of UTC, letting "today" slip into the disabled range.
+function todayIso(): string {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 export function OrderFilters({ categories }: { categories: CategoryTreeOption[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const from = searchParams.get("from") ?? "";
+  const to = searchParams.get("to") ?? "";
+  const today = todayIso();
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -63,14 +73,17 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
 
       <input
         type="date"
-        defaultValue={searchParams.get("from") ?? ""}
+        defaultValue={from}
+        max={to || today}
         onChange={(event) => updateParam("from", event.target.value)}
         className={SELECT_CLASS}
         aria-label="من تاريخ"
       />
       <input
         type="date"
-        defaultValue={searchParams.get("to") ?? ""}
+        defaultValue={to}
+        min={from || undefined}
+        max={today}
         onChange={(event) => updateParam("to", event.target.value)}
         className={SELECT_CLASS}
         aria-label="إلى تاريخ"
