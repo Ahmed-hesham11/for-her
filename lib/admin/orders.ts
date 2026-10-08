@@ -221,12 +221,14 @@ export async function updateOrderPrinted(supabase: SupabaseClient, id: string, p
   return { error: error?.message ?? null };
 }
 
-// A line is either an existing catalog product (product_id set, custom_name/
-// unit_price/image_url ignored) or a one-off item that isn't in the catalog
-// at all — sold once through a DM/comment and never listed on the
-// storefront (product_id null, custom_name + unit_price required instead,
-// image_url optional since there's no products row to source a photo from).
-// It never touches stock_quantity, since there's no product row behind it.
+// A line is either an existing catalog product (product_id set — unit_price
+// is then an optional per-order override of its selling_price, falling back
+// to the product's own price when null; custom_name/image_url are ignored)
+// or a one-off item that isn't in the catalog at all — sold once through a
+// DM/comment and never listed on the storefront (product_id null,
+// custom_name + unit_price required instead, image_url optional since
+// there's no products row to source a photo from). It never touches
+// stock_quantity, since there's no product row behind it.
 export type NewManualOrderItem = {
   product_id: string | null;
   custom_name: string | null;
@@ -264,6 +266,9 @@ export async function createManualOrder(supabase: SupabaseClient, input: ManualO
   }
   if (input.items.some((item) => !item.product_id && (!item.custom_name?.trim() || item.unit_price === null || item.unit_price < 0))) {
     return { id: null, error: "كل سطر يحتاج منتجًا من الموقع، أو اسم وسعر لمنتج غير موجود في الموقع." };
+  }
+  if (input.items.some((item) => item.product_id && item.unit_price !== null && item.unit_price < 0)) {
+    return { id: null, error: "سعر الوحدة يجب أن يكون 0 أو أكثر." };
   }
 
   const { data, error } = await supabase.rpc("admin_create_manual_order", {

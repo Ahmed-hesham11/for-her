@@ -16,6 +16,9 @@ type LineItem = {
   key: string;
   isCustom: boolean;
   product_id: string;
+  // Defaults to the picked product's selling_price, but the admin can type
+  // over it — a per-order price override, not a change to the product.
+  unitPrice: number;
   customName: string;
   customPrice: number;
   customImageUrl: string;
@@ -28,6 +31,7 @@ function emptyLine(): LineItem {
     key: crypto.randomUUID(),
     isCustom: false,
     product_id: "",
+    unitPrice: 0,
     customName: "",
     customPrice: 0,
     customImageUrl: "",
@@ -59,7 +63,7 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
   const removeLine = (key: string) => setLines((current) => (current.length > 1 ? current.filter((line) => line.key !== key) : current));
 
   const subtotal = lines.reduce((sum, line) => {
-    const unitPrice = line.isCustom ? line.customPrice : (productById.get(line.product_id)?.selling_price ?? 0);
+    const unitPrice = line.isCustom ? line.customPrice : line.unitPrice;
     return sum + unitPrice * line.quantity;
   }, 0);
   const shippingFee = activeRates.find((rate) => rate.governorate === governorate)?.shipping_fee ?? 0;
@@ -78,7 +82,7 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
       const items = await Promise.all(
         lines.map(async (line) => {
           if (!line.isCustom) {
-            return { product_id: line.product_id, custom_name: null, unit_price: null, image_url: null, quantity: line.quantity };
+            return { product_id: line.product_id, custom_name: null, unit_price: line.unitPrice, image_url: null, quantity: line.quantity };
           }
 
           let imageUrl = line.customImageUrl || null;
@@ -155,7 +159,6 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
         <p className={`mb-3 ${LABEL_CLASS}`}>عناصر الطلب</p>
         <div className="space-y-3">
           {lines.map((line) => {
-            const product = productById.get(line.product_id);
             return (
               <div key={line.key} className="space-y-2 rounded-[16px] border border-[#eadfd7] bg-white p-3">
                 <div className="flex items-center justify-between">
@@ -230,7 +233,11 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
                   </div>
                 ) : (
                   <div className="grid gap-2 sm:grid-cols-[1fr_90px_110px] sm:items-center">
-                    <ProductPicker products={products} value={line.product_id} onChange={(productId) => updateLine(line.key, { product_id: productId })} />
+                    <ProductPicker
+                      products={products}
+                      value={line.product_id}
+                      onChange={(productId) => updateLine(line.key, { product_id: productId, unitPrice: productById.get(productId)?.selling_price ?? 0 })}
+                    />
                     <input
                       type="number"
                       min="1"
@@ -241,9 +248,16 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
                       className={INPUT_CLASS}
                       required
                     />
-                    <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-2.5 text-sm text-[#5c524e]">
-                      {formatEgp((product?.selling_price ?? 0) * line.quantity)}
-                    </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.unitPrice}
+                      onChange={(event) => updateLine(line.key, { unitPrice: Number(event.target.value) })}
+                      placeholder="سعر الوحدة"
+                      className={INPUT_CLASS}
+                      required
+                    />
                   </div>
                 )}
               </div>
