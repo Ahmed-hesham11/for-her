@@ -3,6 +3,7 @@ import { CouponsTable } from "@/components/admin/coupons-table";
 import { DashboardSection } from "@/components/admin/dashboard-section";
 import { ErrorState } from "@/components/admin/empty-state";
 import { SimpleSearch } from "@/components/admin/simple-search";
+import { requireSuperAdmin } from "@/lib/admin/auth";
 import { getAdminCoupons } from "@/lib/admin/coupons";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -11,6 +12,7 @@ export default async function AdminCouponsPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  await requireSuperAdmin();
   const params = await searchParams;
   const supabase = supabaseAdmin;
 

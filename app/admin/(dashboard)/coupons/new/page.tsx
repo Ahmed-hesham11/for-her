@@ -1,6 +1,9 @@
 import { CouponForm } from "@/components/admin/coupon-form";
+import { requireSuperAdmin } from "@/lib/admin/auth";
 
-export default function NewCouponPage() {
+export default async function NewCouponPage() {
+  await requireSuperAdmin();
+
   return (
     <div className="space-y-6">
       <div>

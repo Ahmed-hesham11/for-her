@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CouponForm } from "@/components/admin/coupon-form";
 import { ErrorState } from "@/components/admin/empty-state";
+import { requireSuperAdmin } from "@/lib/admin/auth";
 import { getAdminCouponById } from "@/lib/admin/coupons";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -9,6 +10,7 @@ export default async function EditCouponPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  await requireSuperAdmin();
   const { id } = await params;
   const supabase = supabaseAdmin;
 

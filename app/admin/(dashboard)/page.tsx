@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AlertIcon, BoxIcon, ReceiptIcon, UsersIcon } from "@/components/icons";
 import { DashboardSection } from "@/components/admin/dashboard-section";
 import { ErrorState } from "@/components/admin/empty-state";
@@ -9,6 +10,7 @@ import { OrderStatusSummary } from "@/components/admin/order-status-summary";
 import { RecentOrdersTable } from "@/components/admin/recent-orders-table";
 import { RevenueChart } from "@/components/admin/revenue-chart";
 import { TopProductsTable } from "@/components/admin/top-products-table";
+import { requireAdmin } from "@/lib/admin/auth";
 import { getDashboardOverview } from "@/lib/admin/data";
 import { formatEgp } from "@/lib/currency";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -18,6 +20,14 @@ export default async function AdminDashboardPage({
 }: {
   searchParams: Promise<Record<string, string | undefined>>;
 }) {
+  // Revenue/profit figures and KPIs are super_admin-only — a plain admin
+  // landing on /admin (e.g. the "Admin" link in the site header) goes
+  // straight to Orders instead, the page they're actually meant to work in.
+  const { profile } = await requireAdmin();
+  if (profile.role !== "super_admin") {
+    redirect("/admin/orders");
+  }
+
   const supabase = supabaseAdmin;
 
   if (!supabase) {

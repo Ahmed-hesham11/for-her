@@ -173,7 +173,7 @@ export async function updateCategoryAction(id: string, input: CategoryInput) {
 }
 
 export async function createCouponAction(input: CouponInput) {
-  const { profile } = await requireAdmin();
+  const { profile } = await requireSuperAdmin();
   const client = requireClient();
   const result = await createCoupon(client, input);
 
@@ -190,7 +190,7 @@ export async function createCouponAction(input: CouponInput) {
 }
 
 export async function updateCouponAction(id: string, input: CouponInput) {
-  const { profile } = await requireAdmin();
+  const { profile } = await requireSuperAdmin();
   const client = requireClient();
   const result = await updateCoupon(client, id, input);
 
@@ -207,7 +207,7 @@ export async function updateCouponAction(id: string, input: CouponInput) {
 }
 
 export async function deleteCouponAction(id: string) {
-  const { profile } = await requireAdmin();
+  const { profile } = await requireSuperAdmin();
   const client = requireClient();
   const { data: row } = await client.from("coupons").select("code").eq("id", id).maybeSingle();
   const result = await deleteCoupon(client, id);
