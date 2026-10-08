@@ -5,7 +5,7 @@ import { FormEvent, useState } from "react";
 import type { CategoryTreeOption, ProductInput } from "@/lib/admin/products";
 import { createProductAction, updateProductAction, uploadCatalogImageAction } from "@/lib/admin/actions";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
-import { formatEgp } from "@/lib/currency";
+import { ProductGalleryField, type GalleryImageSlot } from "@/components/admin/product-gallery-field";
 
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]";
 const LABEL_CLASS = "text-[0.72rem] text-[#7a6762]";
@@ -15,9 +15,11 @@ const DEFAULT_PRODUCT: ProductInput = {
   sku: "",
   description: "",
   category_id: "",
+  purchase_price: 0,
   selling_price: 0,
   original_price: null,
   image_url: "",
+  images: [],
   is_active: true,
   is_best_seller: false,
   best_seller_order: null,
@@ -32,6 +34,7 @@ function generateSku(): string {
 function validate(fields: ProductInput): string | null {
   if (!fields.name.trim()) return "اسم المنتج مطلوب.";
   if (!fields.category_id) return "الفئة مطلوبة.";
+  if (Number.isNaN(fields.purchase_price) || fields.purchase_price < 0) return "يجب أن يكون سعر الشراء 0 أو أكثر.";
   if (Number.isNaN(fields.selling_price) || fields.selling_price < 0) return "يجب أن يكون سعر البيع 0 أو أكثر.";
   if (fields.original_price !== null && (!Number.isFinite(fields.original_price) || fields.original_price <= fields.selling_price)) return "يجب أن يكون السعر الأصلي أكبر من سعر البيع.";
   if (fields.best_seller_order !== null && (!Number.isInteger(fields.best_seller_order) || fields.best_seller_order < 0)) {
@@ -45,17 +48,18 @@ export function ProductForm({
   initialProduct,
   productId,
   currentStock,
-  currentPurchasePrice,
 }: {
   categories: CategoryTreeOption[];
   initialProduct?: ProductInput;
   productId?: string;
   currentStock?: number;
-  currentPurchasePrice?: number;
 }) {
   const router = useRouter();
   const [fields, setFields] = useState<ProductInput>(initialProduct ?? DEFAULT_PRODUCT);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [gallerySlots, setGallerySlots] = useState<GalleryImageSlot[]>(() =>
+    (initialProduct?.images ?? []).map((url) => ({ key: crypto.randomUUID(), url, file: null })),
+  );
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -98,14 +102,27 @@ export function ProductForm({
     setIsSaving(true);
 
     try {
-      // The image only actually uploads here, on save — not the moment it
-      // was picked in the field above.
+      // The image(s) only actually upload here, on save — not the moment
+      // they were picked in the fields above.
       let submitFields = fields;
       if (pendingImageFile) {
         const { url, error: uploadError } = await uploadCatalogImageAction(pendingImageFile, "products");
         if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع هذه الصورة الآن.");
         submitFields = { ...submitFields, image_url: url };
       }
+
+      const resolvedGallerySlots: GalleryImageSlot[] = [];
+      for (const slot of gallerySlots) {
+        if (slot.file) {
+          const { url, error: uploadError } = await uploadCatalogImageAction(slot.file, "products");
+          if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع إحدى الصور الإضافية الآن.");
+          resolvedGallerySlots.push({ ...slot, url, file: null });
+        } else if (slot.url.trim()) {
+          resolvedGallerySlots.push(slot);
+        }
+      }
+      submitFields = { ...submitFields, images: resolvedGallerySlots.map((slot) => slot.url) };
+
       if (!productId && !submitFields.sku.trim()) {
         submitFields = { ...submitFields, sku: generateSku() };
       }
@@ -115,6 +132,7 @@ export function ProductForm({
         if (updateError) throw new Error(updateError);
         setFields(submitFields);
         setPendingImageFile(null);
+        setGallerySlots(resolvedGallerySlots);
         setSuccess("تم تحديث المنتج.");
         router.refresh();
       } else {
@@ -192,16 +210,16 @@ export function ProductForm({
             <p className="text-xs text-[#8a7c78]">تبدأ المنتجات الجديدة من 0 — أضف المخزون عبر المشتريات بعد إنشاء هذا المنتج.</p>
           </div>
         )}
-        <div className="space-y-1.5 text-sm text-[#4e4442]">
+        <label className="space-y-1.5 text-sm text-[#4e4442]">
           <span className={LABEL_CLASS}>سعر الشراء الحالي</span>
-          <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-3 text-sm text-[#5c524e]">
-            {formatEgp(currentPurchasePrice ?? 0)}
-          </div>
-          <p className="text-xs text-[#8a7c78]">يُحدَّث تلقائيًا من آخر عملية شراء لهذا المنتج — لا يمكن تعديله هنا.</p>
-        </div>
+          <input type="number" min="0" step="0.01" value={fields.purchase_price} onChange={(event) => update("purchase_price", Number(event.target.value))} className={INPUT_CLASS} required />
+          <p className="text-xs text-[#8a7c78]">يتحدّث أيضًا تلقائيًا من آخر عملية شراء مستلمة لهذا المنتج عبر المشتريات.</p>
+        </label>
       </div>
 
       <ImageUploadField label="صورة المنتج" value={fields.image_url} onChange={(url) => update("image_url", url)} onFileSelected={setPendingImageFile} />
+
+      <ProductGalleryField slots={gallerySlots} onChange={setGallerySlots} />
 
       <label className="flex items-center gap-3 text-sm text-[#524947]">
         <input type="checkbox" checked={fields.is_active} onChange={(event) => update("is_active", event.target.checked)} className="h-4 w-4 accent-[#1d1a19]" />

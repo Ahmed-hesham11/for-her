@@ -37,15 +37,16 @@ export default async function EditProductPage({
         productId={product.id}
         categories={categories}
         currentStock={product.stock_quantity}
-        currentPurchasePrice={product.purchase_price}
         initialProduct={{
           name: product.name,
           sku: product.sku,
           description: product.description ?? "",
           category_id: product.category_id,
+          purchase_price: product.purchase_price,
           selling_price: product.selling_price,
           original_price: product.original_price,
           image_url: product.image_url ?? "",
+          images: product.images,
           is_active: product.is_active,
           is_best_seller: product.is_best_seller,
           best_seller_order: product.best_seller_order,

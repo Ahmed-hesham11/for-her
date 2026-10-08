@@ -13,7 +13,7 @@ export function ImageUploadField({
   onChange,
   onFileSelected,
 }: {
-  label: string;
+  label?: string;
   value: string;
   onChange: (url: string) => void;
   onFileSelected: (file: File | null) => void;
@@ -63,7 +63,7 @@ export function ImageUploadField({
 
   return (
     <label htmlFor={inputId} className="block space-y-1.5 text-sm text-[#4e4442]">
-      <span className={LABEL_CLASS}>{label}</span>
+      {label ? <span className={LABEL_CLASS}>{label}</span> : null}
       <div className="flex items-center gap-3">
         {previewUrl || value ? (
           <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full border border-[#e4d4cd] bg-white">

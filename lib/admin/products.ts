@@ -17,6 +17,7 @@ export type AdminProduct = {
   original_price: number | null;
   stock_quantity: number;
   image_url: string | null;
+  images: string[];
   is_active: boolean;
   is_best_seller: boolean;
   best_seller_order: number | null;
@@ -59,6 +60,7 @@ type ProductRow = {
   original_price: number | null;
   stock_quantity: number;
   image_url: string | null;
+  images: string[] | null;
   is_active: boolean;
   is_best_seller: boolean;
   best_seller_order: number | null;
@@ -84,6 +86,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
     original_price: row.original_price === null ? null : Number(row.original_price),
     stock_quantity: Number(row.stock_quantity),
     image_url: row.image_url,
+    images: row.images ?? [],
     is_active: row.is_active,
     is_best_seller: row.is_best_seller,
     best_seller_order: row.best_seller_order,
@@ -91,7 +94,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
   };
 }
 
-const PRODUCT_SELECT = "id, name, sku, description, category_id, purchase_price, selling_price, original_price, stock_quantity, image_url, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
+const PRODUCT_SELECT = "id, name, sku, description, category_id, purchase_price, selling_price, original_price, stock_quantity, image_url, images, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
 
 export async function getAdminProducts(supabase: SupabaseClient, params: ProductListParams = {}): Promise<ProductListResult> {
   const page = Math.max(1, params.page ?? 1);
@@ -186,21 +189,26 @@ export type ProductInput = {
   sku: string;
   description: string;
   category_id: string;
+  purchase_price: number;
   selling_price: number;
   original_price: number | null;
   image_url: string;
+  images: string[];
   is_active: boolean;
   is_best_seller: boolean;
   best_seller_order: number | null;
 };
 
-// stock_quantity and purchase_price are intentionally NOT part of this
-// input — neither is ever set directly from the product form. stock_quantity
-// starts at 0 for a new product and purchase_price starts at 0; from then on
-// purchase_price only ever changes via Purchases (admin_create_purchase
-// records the latest unit cost), and stock_quantity only ever changes via
-// Purchases, customer orders (create_secure_order), and manual recounts on
-// the Inventory page (setProductStock, below).
+// stock_quantity is intentionally NOT part of this input — it's never set
+// directly from the product form. A new product starts at 0; from then on
+// it only ever changes via Purchases, customer orders (create_secure_order),
+// and manual recounts on the Inventory page (setProductStock, below).
+//
+// purchase_price, unlike stock_quantity, IS editable here — a plain "current
+// unit cost" field the admin can correct directly. Purchases still also
+// overwrites it (to the latest received unit cost) whenever a purchase is
+// marked received, same as before; editing it here is just another way it
+// can change, not a replacement for that.
 export async function createProduct(supabase: SupabaseClient, input: ProductInput): Promise<{ id: string | null; error: string | null }> {
   const { data, error } = await supabase
     .from("products")
@@ -209,11 +217,12 @@ export async function createProduct(supabase: SupabaseClient, input: ProductInpu
       sku: input.sku,
       description: input.description || null,
       category_id: input.category_id,
-      purchase_price: 0,
+      purchase_price: input.purchase_price,
       selling_price: input.selling_price,
       original_price: input.original_price,
       stock_quantity: 0,
       image_url: input.image_url || null,
+      images: input.images,
       is_active: input.is_active,
       is_best_seller: input.is_best_seller,
       best_seller_order: input.best_seller_order,
@@ -233,9 +242,11 @@ export async function updateProduct(supabase: SupabaseClient, id: string, input:
       sku: input.sku,
       description: input.description || null,
       category_id: input.category_id,
+      purchase_price: input.purchase_price,
       selling_price: input.selling_price,
       original_price: input.original_price,
       image_url: input.image_url || null,
+      images: input.images,
       is_active: input.is_active,
       is_best_seller: input.is_best_seller,
       best_seller_order: input.best_seller_order,
