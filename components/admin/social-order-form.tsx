@@ -2,7 +2,6 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import type { NewManualOrderItem } from "@/lib/admin/orders";
 import { createManualOrderAction } from "@/lib/admin/actions";
 import type { ProductPricedOption } from "@/lib/admin/products";
 import { ProductPicker } from "@/components/admin/product-picker";
@@ -12,10 +11,17 @@ import { formatEgp } from "@/lib/currency";
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-2.5 text-sm outline-none focus:border-[#c8a78f]";
 const LABEL_CLASS = "text-[0.72rem] text-[#7a6762]";
 
-type LineItem = NewManualOrderItem & { key: string };
+type LineItem = {
+  key: string;
+  isCustom: boolean;
+  product_id: string;
+  customName: string;
+  customPrice: number;
+  quantity: number;
+};
 
 function emptyLine(): LineItem {
-  return { key: crypto.randomUUID(), product_id: "", quantity: 1 };
+  return { key: crypto.randomUUID(), isCustom: false, product_id: "", customName: "", customPrice: 0, quantity: 1 };
 }
 
 export function SocialOrderForm({ products, shippingRates }: { products: ProductPricedOption[]; shippingRates: AdminShippingRate[] }) {
@@ -27,7 +33,6 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
   const [address, setAddress] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
   const [notes, setNotes] = useState("");
-  const [discount, setDiscount] = useState(0);
   const [lines, setLines] = useState<LineItem[]>([emptyLine()]);
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
@@ -41,9 +46,12 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
   const addLine = () => setLines((current) => [...current, emptyLine()]);
   const removeLine = (key: string) => setLines((current) => (current.length > 1 ? current.filter((line) => line.key !== key) : current));
 
-  const subtotal = lines.reduce((sum, line) => sum + (productById.get(line.product_id)?.selling_price ?? 0) * line.quantity, 0);
+  const subtotal = lines.reduce((sum, line) => {
+    const unitPrice = line.isCustom ? line.customPrice : (productById.get(line.product_id)?.selling_price ?? 0);
+    return sum + unitPrice * line.quantity;
+  }, 0);
   const shippingFee = activeRates.find((rate) => rate.governorate === governorate)?.shipping_fee ?? 0;
-  const total = Math.max(subtotal + shippingFee - discount, 0);
+  const total = subtotal + shippingFee;
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -61,8 +69,12 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
         address,
         payment_method: paymentMethod,
         notes,
-        discount,
-        items: lines.map(({ product_id, quantity }) => ({ product_id, quantity })),
+        discount: 0,
+        items: lines.map((line) =>
+          line.isCustom
+            ? { product_id: null, custom_name: line.customName, unit_price: line.customPrice, quantity: line.quantity }
+            : { product_id: line.product_id, custom_name: null, unit_price: null, quantity: line.quantity },
+        ),
       });
       if (createError || !id) throw new Error(createError ?? "تعذّر تسجيل الطلب.");
       router.push(`/admin/orders/${id}`);
@@ -118,30 +130,79 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
           {lines.map((line) => {
             const product = productById.get(line.product_id);
             return (
-              <div key={line.key} className="grid gap-2 rounded-[16px] border border-[#eadfd7] bg-white p-3 sm:grid-cols-[1fr_90px_110px_auto] sm:items-center">
-                <ProductPicker products={products} value={line.product_id} onChange={(productId) => updateLine(line.key, { product_id: productId })} />
-                <input
-                  type="number"
-                  min="1"
-                  max={product?.stock_quantity ?? undefined}
-                  step="1"
-                  value={line.quantity}
-                  onChange={(event) => updateLine(line.key, { quantity: Number(event.target.value) })}
-                  placeholder="الكمية"
-                  className={INPUT_CLASS}
-                  required
-                />
-                <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-2.5 text-sm text-[#5c524e]">
-                  {formatEgp((product?.selling_price ?? 0) * line.quantity)}
+              <div key={line.key} className="space-y-2 rounded-[16px] border border-[#eadfd7] bg-white p-3">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 text-[0.68rem] text-[#8a7c78]">
+                    <input
+                      type="checkbox"
+                      checked={line.isCustom}
+                      onChange={(event) => updateLine(line.key, { isCustom: event.target.checked, product_id: "", customName: "", customPrice: 0 })}
+                      className="h-3.5 w-3.5 accent-[#1d1a19]"
+                    />
+                    منتج جديد (مش موجود في الموقع)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeLine(line.key)}
+                    disabled={lines.length === 1}
+                    className="text-[0.68rem] font-medium text-[#8a3f34] hover:underline disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    إزالة
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => removeLine(line.key)}
-                  disabled={lines.length === 1}
-                  className="justify-self-start text-[0.68rem] font-medium text-[#8a3f34] hover:underline disabled:cursor-not-allowed disabled:opacity-40 sm:justify-self-center"
-                >
-                  إزالة
-                </button>
+
+                {line.isCustom ? (
+                  <div className="grid gap-2 sm:grid-cols-[1.4fr_110px_90px_110px] sm:items-center">
+                    <input
+                      value={line.customName}
+                      onChange={(event) => updateLine(line.key, { customName: event.target.value })}
+                      placeholder="اسم المنتج"
+                      className={INPUT_CLASS}
+                      required
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={line.customPrice}
+                      onChange={(event) => updateLine(line.key, { customPrice: Number(event.target.value) })}
+                      placeholder="سعر الوحدة"
+                      className={INPUT_CLASS}
+                      required
+                    />
+                    <input
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={line.quantity}
+                      onChange={(event) => updateLine(line.key, { quantity: Number(event.target.value) })}
+                      placeholder="الكمية"
+                      className={INPUT_CLASS}
+                      required
+                    />
+                    <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-2.5 text-sm text-[#5c524e]">
+                      {formatEgp(line.customPrice * line.quantity)}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid gap-2 sm:grid-cols-[1fr_90px_110px] sm:items-center">
+                    <ProductPicker products={products} value={line.product_id} onChange={(productId) => updateLine(line.key, { product_id: productId })} />
+                    <input
+                      type="number"
+                      min="1"
+                      max={product?.stock_quantity ?? undefined}
+                      step="1"
+                      value={line.quantity}
+                      onChange={(event) => updateLine(line.key, { quantity: Number(event.target.value) })}
+                      placeholder="الكمية"
+                      className={INPUT_CLASS}
+                      required
+                    />
+                    <div className="flex items-center rounded-full border border-[#e4d4cd] bg-[#f3ece6] px-4 py-2.5 text-sm text-[#5c524e]">
+                      {formatEgp((product?.selling_price ?? 0) * line.quantity)}
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -155,11 +216,6 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
         </button>
       </div>
 
-      <label className="block max-w-[220px] space-y-1.5 text-sm text-[#4e4442]">
-        <span className={LABEL_CLASS}>خصم (اختياري)</span>
-        <input type="number" min="0" step="0.01" value={discount} onChange={(event) => setDiscount(Number(event.target.value))} className={INPUT_CLASS} />
-      </label>
-
       <label className="block space-y-1.5 text-sm text-[#4e4442]">
         <span className={LABEL_CLASS}>ملاحظات (اختياري)</span>
         <textarea rows={2} value={notes} onChange={(event) => setNotes(event.target.value)} className="w-full rounded-[18px] border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]" />
@@ -168,7 +224,6 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
       <div className="space-y-2 border-t border-[#eadfd7] pt-4 text-sm text-[#4a4442]">
         <div className="flex justify-between"><span>الإجمالي الفرعي</span><span>{formatEgp(subtotal)}</span></div>
         <div className="flex justify-between"><span>الشحن</span><span>{formatEgp(shippingFee)}</span></div>
-        <div className="flex justify-between"><span>الخصم</span><span>-{formatEgp(discount)}</span></div>
         <div className="flex justify-between text-base font-semibold text-[#1d1918]"><span>الإجمالي</span><span>{formatEgp(total)}</span></div>
       </div>
 

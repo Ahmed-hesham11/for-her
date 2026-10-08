@@ -184,7 +184,17 @@ export async function updateOrderPrinted(supabase: SupabaseClient, id: string, p
   return { error: error?.message ?? null };
 }
 
-export type NewManualOrderItem = { product_id: string; quantity: number };
+// A line is either an existing catalog product (product_id set, custom_name/
+// unit_price ignored) or a one-off item that isn't in the catalog at all —
+// sold once through a DM/comment and never listed on the storefront
+// (product_id null, custom_name + unit_price required instead). It never
+// touches stock_quantity, since there's no product row behind it.
+export type NewManualOrderItem = {
+  product_id: string | null;
+  custom_name: string | null;
+  unit_price: number | null;
+  quantity: number;
+};
 
 export type ManualOrderInput = {
   customer_name: string;
@@ -210,8 +220,11 @@ export async function createManualOrder(supabase: SupabaseClient, input: ManualO
   if (!input.phone_1.trim()) return { id: null, error: "رقم الهاتف مطلوب." };
   if (!input.governorate) return { id: null, error: "المحافظة مطلوبة." };
   if (input.items.length === 0) return { id: null, error: "أضف منتجًا واحدًا على الأقل." };
-  if (input.items.some((item) => !item.product_id || item.quantity < 1)) {
-    return { id: null, error: "كل سطر يحتاج منتج وكمية 1 على الأقل." };
+  if (input.items.some((item) => item.quantity < 1)) {
+    return { id: null, error: "كل سطر يحتاج كمية 1 على الأقل." };
+  }
+  if (input.items.some((item) => !item.product_id && (!item.custom_name?.trim() || item.unit_price === null || item.unit_price < 0))) {
+    return { id: null, error: "كل سطر يحتاج منتجًا من الموقع، أو اسم وسعر لمنتج غير موجود في الموقع." };
   }
 
   const { data, error } = await supabase.rpc("admin_create_manual_order", {

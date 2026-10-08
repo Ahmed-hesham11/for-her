@@ -24,9 +24,7 @@ export default async function NewSocialOrderPage() {
         <p className="mt-1 text-sm text-[#8a7c78]">للطلبات اللي بتيجي من تعليقات أو رسائل إنستجرام/فيسبوك مش من الموقع مباشرة.</p>
       </div>
 
-      {products.length === 0 ? (
-        <ErrorState message="لا توجد منتجات متاحة في المخزون حاليًا." />
-      ) : shippingResult.rates.length === 0 ? (
+      {shippingResult.rates.length === 0 ? (
         <ErrorState message="لا توجد محافظات شحن مُعرّفة بعد." />
       ) : (
         <SocialOrderForm products={products} shippingRates={shippingResult.rates} />
