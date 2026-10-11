@@ -1,26 +1,32 @@
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
+import { argon2Verify } from "hash-wasm";
 
-// Native addon — Node.js only. Never import this module from middleware.ts
-// or anything else that runs on the Edge runtime.
+const BCRYPT_ROUNDS = 12;
+
 export function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password, { type: argon2.argon2id });
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
-export function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return argon2.verify(hash, password);
+export function isLegacyPasswordHash(hash: string): boolean {
+  return hash.startsWith("$argon2");
 }
 
-// Used by login to run a real verify() against *something* when the email
-// isn't found, so a missing-account response takes roughly the same time as
-// a wrong-password response — otherwise the timing difference is a
-// user-enumeration oracle. Hashed lazily once (a hand-written hash string
-// risks being malformed, which would make argon2 reject it instantly
-// instead of doing the full computation — defeating the point).
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  try {
+    if (isLegacyPasswordHash(hash)) {
+      return await argon2Verify({ password, hash });
+    }
+    return await bcrypt.compare(password, hash);
+  } catch {
+    return false;
+  }
+}
+
 let dummyHashPromise: Promise<string> | null = null;
 
 export async function verifyAgainstDummyHash(password: string): Promise<boolean> {
   if (!dummyHashPromise) {
     dummyHashPromise = hashPassword(crypto.randomUUID());
   }
-  return argon2.verify(await dummyHashPromise, password);
+  return bcrypt.compare(password, await dummyHashPromise);
 }

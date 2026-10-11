@@ -7,7 +7,7 @@ Storefront and admin dashboard for a women's fashion e-commerce brand, built wit
 - **Framework:** Next.js 15 (App Router), React 19, TypeScript
 - **Styling:** Tailwind CSS 4
 - **Database/storage:** Supabase (Postgres + Storage)
-- **Auth:** Custom session-based auth (argon2 password hashing, hashed session tokens stored in a `sessions` table — not Supabase Auth)
+- **Auth:** Custom session-based auth (bcrypt password hashing with transparent legacy Argon2 migration, hashed session tokens stored in a `sessions` table — not Supabase Auth)
 - **i18n:** Built-in English/Arabic locale switching with RTL support
 
 ## Requirements

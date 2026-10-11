@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAgainstDummyHash, verifyPassword } from "@/lib/auth/password";
+import { hashPassword, isLegacyPasswordHash, verifyAgainstDummyHash, verifyPassword } from "@/lib/auth/password";
 import { createSession, sessionCookieOptions, SESSION_COOKIE } from "@/lib/auth/session";
 import { normalizePhone } from "@/lib/auth/validation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -35,6 +35,11 @@ export async function POST(request: Request) {
   const isValid = await verifyPassword(password, profile.password_hash);
   if (!isValid) {
     return NextResponse.json({ error: GENERIC_ERROR }, { status: 401 });
+  }
+
+  if (isLegacyPasswordHash(profile.password_hash)) {
+    const passwordHash = await hashPassword(password);
+    await supabaseAdmin.from("profiles").update({ password_hash: passwordHash }).eq("id", profile.id);
   }
 
   const token = await createSession(profile.id);

@@ -2,7 +2,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 // Edge-safe: only Web Crypto + a fetch-based Supabase client (no Node-only
 // APIs), so this module can be imported from middleware.ts. Keep it free of
-// lib/auth/password.ts's argon2 import for the same reason.
+// lib/auth/password.ts's server-only password dependencies for the same reason.
 
 export const SESSION_COOKIE = "forher_session";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
