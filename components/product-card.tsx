@@ -53,7 +53,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
         <Link href={`/product/${product.id}`} className="block focus-visible:outline-none focus-visible:underline">
           <h3 className="truncate text-[0.95rem] font-medium tracking-[0.01em] text-[#2b201d] transition-colors duration-300 group-hover:text-[#a06f5c] md:text-[1.05rem]">{product.name}</h3>
         </Link>
-        <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        <div className="mt-2 flex flex-col items-stretch gap-3 min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between">
           <div className="flex items-center gap-2">
             <span className={`text-[0.98rem] font-semibold md:text-[1.05rem] ${isOnOffer ? "text-[#9c4a37]" : "text-[#1f1b1a]"}`}>{formatEgp(product.price)}</span>
             {isOnOffer ? <span className="text-[0.85rem] font-medium text-[#8b7b76] line-through decoration-[#8b7b76]/70 decoration-2">{formatEgp(product.originalPrice)}</span> : null}
@@ -61,7 +61,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
           <button
             type="button"
             onClick={() => addToCart(product)}
-            className="rounded-full border border-[#221d1b] bg-[#1d1a19] px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-[#fffaf7] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 md:px-3.5 md:text-[0.63rem]"
+            className="min-h-11 rounded-full border border-[#221d1b] bg-[#1d1a19] px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-[#fffaf7] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 min-[390px]:min-h-0 md:px-3.5 md:text-[0.63rem]"
           >
             {t.common.addToCart}
           </button>

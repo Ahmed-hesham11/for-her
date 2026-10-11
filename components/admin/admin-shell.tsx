@@ -46,17 +46,17 @@ export function AdminShell({ adminName, adminRole, children }: { adminName: stri
         </aside>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[#eadfd7] bg-[#f8f2ee]/95 px-4 py-3 backdrop-blur md:px-8">
+          <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[#eadfd7] bg-[#f8f2ee]/95 px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] backdrop-blur md:px-8">
             <button
               type="button"
               onClick={() => setMobileOpen(true)}
-              className="flex h-9 w-9 items-center justify-center rounded-full border border-[#e8d7d0] bg-white/60 text-[#2f2322] md:hidden"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-[#e8d7d0] bg-white/60 text-[#2f2322] md:hidden"
               aria-label="فتح القائمة"
             >
               <MenuIcon className="h-4 w-4" />
             </button>
-            <div className="md:hidden">
-              <span className="brand-serif text-[1.5rem] leading-none text-[#1b1817]">FOR HER · الإدارة</span>
+            <div className="min-w-0 md:hidden">
+              <span className="brand-serif block truncate text-[1.5rem] leading-none text-[#1b1817]">FOR HER · الإدارة</span>
             </div>
           </header>
 
@@ -72,11 +72,11 @@ export function AdminShell({ adminName, adminRole, children }: { adminName: stri
             className="absolute inset-0 bg-black/30"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute right-0 top-0 flex h-full w-[80%] max-w-[300px] flex-col bg-[#faf6f3] px-3 py-5 shadow-2xl">
+          <div className="absolute right-0 top-0 flex h-full w-[min(82%,320px)] flex-col overflow-y-auto bg-[#faf6f3] px-3 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))] shadow-2xl">
             <button
               type="button"
               onClick={() => setMobileOpen(false)}
-              className="absolute left-3 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-[#e8d7d0] bg-white/60 text-[#2f2322]"
+              className="absolute left-3 top-4 flex h-10 w-10 items-center justify-center rounded-full border border-[#e8d7d0] bg-white/60 text-[#2f2322]"
               aria-label="إغلاق القائمة"
             >
               <CloseIcon className="h-4 w-4" />

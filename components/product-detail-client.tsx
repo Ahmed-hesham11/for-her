@@ -45,7 +45,7 @@ export function ProductDetailClient({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="group relative min-h-[420px] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:min-h-[560px]">
+          <div className="group relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:aspect-auto md:min-h-[560px]">
             <Image
               src={product.image}
               alt={product.name}
@@ -107,14 +107,14 @@ export function ProductDetailClient({
               <button
                 type="button"
                 onClick={() => addToCart(product, quantity)}
-                className="flex-1 rounded-full bg-[#1d1a19] px-6 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#332d2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0"
+                className="min-h-12 min-w-0 flex-1 rounded-full bg-[#1d1a19] px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#332d2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 sm:px-6 sm:tracking-[0.16em]"
               >
                 {t.common.addToCart}
               </button>
               <button
                 type="button"
                 onClick={handleBuyNow}
-                className="rounded-full border border-[#221d1b] px-6 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-[#1d1a19] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f6ebe5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0"
+                className="min-h-12 rounded-full border border-[#221d1b] px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-[#1d1a19] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f6ebe5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 sm:px-6 sm:tracking-[0.16em]"
               >
                 {t.productDetail.buyNow}
               </button>

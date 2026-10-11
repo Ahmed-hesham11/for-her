@@ -21,7 +21,7 @@ export function AdminSidebarNav({ role, onNavigate }: { role: string; onNavigate
               href={item.href}
               onClick={onNavigate}
               aria-current={isActive ? "page" : undefined}
-              className={`flex items-center gap-3 rounded-full px-4 py-2.5 text-sm font-medium transition ${
+              className={`flex min-h-11 items-center gap-3 rounded-full px-4 py-3 text-sm font-medium transition ${
                 isActive
                   ? "bg-[#1d1a19] text-white"
                   : "text-[#4a4442] hover:bg-[#f2e7df]"

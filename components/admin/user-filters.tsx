@@ -20,9 +20,9 @@ export function UserFilters() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
       <form
-        className="min-w-[200px] flex-1"
+        className="min-w-0 sm:min-w-[200px] sm:flex-1"
         onSubmit={(event) => {
           event.preventDefault();
           updateParam("search", search);
@@ -37,7 +37,7 @@ export function UserFilters() {
         />
       </form>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("role") ?? ""} onChange={(event) => updateParam("role", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("role") ?? ""} onChange={(event) => updateParam("role", event.target.value)}>
         <option value="">كل الأدوار</option>
         <option value="customer">عملاء</option>
         <option value="admin">أدمنز</option>

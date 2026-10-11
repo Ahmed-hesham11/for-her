@@ -148,10 +148,10 @@ export function CategorySidebar({ categories }: { categories: Category[] }) {
       {mobileOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden">
           <button type="button" aria-label={t.sidebar.closeFilters} onClick={() => setMobileOpen(false)} className="absolute inset-0 bg-black/30" />
-          <div className="absolute inset-y-0 start-0 w-[82%] max-w-[320px] overflow-y-auto bg-[#f8f2ee] p-5 shadow-2xl">
+          <div className="absolute inset-y-0 start-0 w-[82%] max-w-[320px] overflow-y-auto bg-[#f8f2ee] px-5 pb-5 pt-[calc(1.25rem+env(safe-area-inset-top))] shadow-2xl">
             <div className="mb-5 flex items-center justify-between">
               <span className="text-[0.72rem] font-semibold uppercase tracking-[0.2em] text-[#584f4d]">{t.sidebar.filters}</span>
-              <button type="button" onClick={() => setMobileOpen(false)} aria-label={t.sidebar.closeFilters} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#e5d7d1]">
+              <button type="button" onClick={() => setMobileOpen(false)} aria-label={t.sidebar.closeFilters} className="flex h-10 w-10 items-center justify-center rounded-full border border-[#e5d7d1]">
                 <CloseIcon className="h-4 w-4" />
               </button>
             </div>

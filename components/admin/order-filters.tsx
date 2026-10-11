@@ -33,9 +33,9 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
       <form
-        className="min-w-[200px] flex-1"
+        className="min-w-0 sm:min-w-[200px] sm:flex-1"
         onSubmit={(event) => {
           event.preventDefault();
           updateParam("search", search);
@@ -50,21 +50,21 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
         />
       </form>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("status") ?? ""} onChange={(event) => updateParam("status", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("status") ?? ""} onChange={(event) => updateParam("status", event.target.value)}>
         <option value="">كل الحالات</option>
         {ORDER_STATUSES.map((status) => (
           <option key={status} value={status}>{ORDER_STATUS_LABELS_AR[status] ?? status}</option>
         ))}
       </select>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("category") ?? ""} onChange={(event) => updateParam("category", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("category") ?? ""} onChange={(event) => updateParam("category", event.target.value)}>
         <option value="">كل الفئات</option>
         {categories.map((category) => (
           <option key={category.id} value={category.id}>{category.name}</option>
         ))}
       </select>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("payment") ?? ""} onChange={(event) => updateParam("payment", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("payment") ?? ""} onChange={(event) => updateParam("payment", event.target.value)}>
         <option value="">كل طرق الدفع</option>
         {PAYMENT_STATUSES.map((status) => (
           <option key={status} value={status}>{PAYMENT_STATUS_LABELS_AR[status] ?? status}</option>
@@ -76,7 +76,7 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
         defaultValue={from}
         max={to || today}
         onChange={(event) => updateParam("from", event.target.value)}
-        className={SELECT_CLASS}
+        className={`${SELECT_CLASS} w-full sm:w-auto`}
         aria-label="من تاريخ"
       />
       <input
@@ -85,7 +85,7 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
         min={from || undefined}
         max={today}
         onChange={(event) => updateParam("to", event.target.value)}
-        className={SELECT_CLASS}
+        className={`${SELECT_CLASS} w-full sm:w-auto`}
         aria-label="إلى تاريخ"
       />
     </div>

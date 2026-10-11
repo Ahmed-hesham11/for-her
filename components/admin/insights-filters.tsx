@@ -28,7 +28,7 @@ export function InsightsFilters() {
   }
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:flex-wrap">
       <label className="flex flex-col gap-1 text-[0.68rem] text-[#8a7c78]">
         <span>من</span>
         <input
@@ -36,7 +36,7 @@ export function InsightsFilters() {
           defaultValue={from}
           max={to || today}
           onChange={(event) => updateParam("from", event.target.value)}
-          className={SELECT_CLASS}
+          className={`${SELECT_CLASS} w-full sm:w-auto`}
           aria-label="من تاريخ"
         />
       </label>
@@ -48,12 +48,12 @@ export function InsightsFilters() {
           min={from || undefined}
           max={today}
           onChange={(event) => updateParam("to", event.target.value)}
-          className={SELECT_CLASS}
+          className={`${SELECT_CLASS} w-full sm:w-auto`}
           aria-label="إلى تاريخ"
         />
       </label>
       {hasRange ? (
-        <button type="button" onClick={() => router.push(pathname)} className="text-sm text-[#9b5d50] underline-offset-2 hover:underline">
+        <button type="button" onClick={() => router.push(pathname)} className="col-span-2 justify-self-start text-sm text-[#9b5d50] underline-offset-2 hover:underline sm:col-span-1">
           إعادة التعيين
         </button>
       ) : null}

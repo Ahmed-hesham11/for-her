@@ -25,7 +25,7 @@ export function SiteFooter() {
 
   return (
     <footer className="mt-12 border-t border-[#eadcd4] bg-[#f8f1ee] text-[#2c2321]">
-      <div className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
+      <div className="mx-auto max-w-[1400px] px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-8 md:px-8">
         <div className="grid gap-8 md:grid-cols-3">
           <div className="space-y-3">
             <span className="brand-serif text-[2rem] leading-none">FOR HER</span>

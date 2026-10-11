@@ -9,7 +9,7 @@ export function AuthHeader() {
 
   return (
     <header className="border-b border-[#e8ddd7] bg-[#faf6f3]/90 backdrop-blur-sm">
-      <div className="mx-auto flex max-w-[1120px] items-center justify-between px-5 py-4 md:px-8">
+      <div className="mx-auto flex max-w-[1120px] items-center justify-between px-5 pb-4 pt-[calc(1rem+env(safe-area-inset-top))] md:px-8">
         <Link href="/" className="brand-serif text-[1.7rem] leading-none tracking-[-0.03em] text-[#1b1817] md:text-[2rem]">
           FOR HER
         </Link>

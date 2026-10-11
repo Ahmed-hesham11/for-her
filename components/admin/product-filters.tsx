@@ -21,9 +21,9 @@ export function ProductFilters({ categories }: { categories: ProductOption[] }) 
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="grid gap-3 sm:flex sm:flex-wrap sm:items-center">
       <form
-        className="flex-1 min-w-[200px]"
+        className="min-w-0 sm:min-w-[200px] sm:flex-1"
         onSubmit={(event) => {
           event.preventDefault();
           updateParam("search", search);
@@ -38,27 +38,27 @@ export function ProductFilters({ categories }: { categories: ProductOption[] }) 
         />
       </form>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("category") ?? ""} onChange={(event) => updateParam("category", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("category") ?? ""} onChange={(event) => updateParam("category", event.target.value)}>
         <option value="">كل الفئات</option>
         {categories.map((category) => (
           <option key={category.id} value={category.id}>{category.name}</option>
         ))}
       </select>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("active") ?? "all"} onChange={(event) => updateParam("active", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("active") ?? "all"} onChange={(event) => updateParam("active", event.target.value)}>
         <option value="all">كل الحالات</option>
         <option value="active">نشط</option>
         <option value="inactive">غير نشط</option>
       </select>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("stock") ?? "all"} onChange={(event) => updateParam("stock", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("stock") ?? "all"} onChange={(event) => updateParam("stock", event.target.value)}>
         <option value="all">كل حالات المخزون</option>
         <option value="in_stock">متوفر</option>
         <option value="low">مخزون منخفض</option>
         <option value="out">نفد المخزون</option>
       </select>
 
-      <select className={SELECT_CLASS} defaultValue={searchParams.get("sort") ?? "newest"} onChange={(event) => updateParam("sort", event.target.value)}>
+      <select className={`${SELECT_CLASS} w-full sm:w-auto`} defaultValue={searchParams.get("sort") ?? "newest"} onChange={(event) => updateParam("sort", event.target.value)}>
         <option value="newest">الأحدث أولاً</option>
         <option value="name_asc">الاسم أ-ي</option>
         <option value="price_asc">السعر: من الأقل للأعلى</option>

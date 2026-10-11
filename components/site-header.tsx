@@ -15,7 +15,7 @@ import { isAdminRole } from "@/lib/admin/roles";
 import { navItems } from "@/lib/storefront-data";
 
 const AUTH_LABEL_CLASS = "rounded-full border px-3.5 py-2 text-[0.63rem] font-semibold uppercase tracking-[0.13em] transition duration-200";
-const ICON_BUTTON_CLASS = "flex h-9 w-9 items-center justify-center rounded-full border border-[#e8d7d0] bg-white/60 text-[#2f2322] transition-all duration-300 hover:scale-105 hover:border-[#c9a99d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] active:scale-95";
+const ICON_BUTTON_CLASS = "flex h-10 w-10 items-center justify-center rounded-full border border-[#e8d7d0] bg-white/60 text-[#2f2322] transition-all duration-300 hover:scale-105 hover:border-[#c9a99d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] active:scale-95 md:h-9 md:w-9";
 const NAV_LINK_CLASS = "relative py-1 transition-colors duration-300 hover:text-[#b76b5b] after:absolute after:bottom-0 after:start-0 after:h-px after:w-0 after:bg-[#a06f5c] after:transition-all after:duration-300 after:ease-[cubic-bezier(0.16,1,0.3,1)] hover:after:w-full focus-visible:outline-none focus-visible:after:w-full";
 
 export function SiteHeader() {
@@ -48,7 +48,7 @@ export function SiteHeader() {
 
   return (
     <header className={`sticky top-0 z-30 border-b border-[#eadfda] bg-[#f7f1ee]/95 text-[#1f1a19] backdrop-blur transition-shadow duration-300 ${scrolled ? "shadow-[0_4px_20px_rgba(41,25,20,0.06)]" : "shadow-none"}`}>
-      <div className="mx-auto max-w-[1440px] px-4 py-3 md:px-8">
+      <div className="mx-auto max-w-[1440px] px-4 pb-3 pt-[calc(0.75rem+env(safe-area-inset-top))] md:px-8">
         <div className="hidden items-center justify-between gap-4 md:flex">
           <div className="hidden flex-1 items-center md:flex">
             <HeaderSearch className="max-w-[280px]" />

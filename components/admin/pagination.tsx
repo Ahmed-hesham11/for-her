@@ -26,11 +26,11 @@ export function Pagination({
   }
 
   return (
-    <div className="flex items-center justify-between border-t border-[#eadfd7] px-4 py-3 text-sm text-[#5a504d]">
-      <span>
+    <div className="flex flex-col gap-3 border-t border-[#eadfd7] px-4 py-3 text-sm text-[#5a504d] sm:flex-row sm:items-center sm:justify-between">
+      <span className="text-center sm:text-start">
         صفحة {page} من {totalPages} · {total} منتج
       </span>
-      <div className="flex gap-2">
+      <div className="flex justify-center gap-2 sm:justify-start">
         {page > 1 ? (
           <Link href={hrefForPage(page - 1)} className="rounded-full border border-[#e4d4cd] px-4 py-1.5 text-[0.7rem] uppercase tracking-[0.1em] transition hover:bg-[#f2e7df]">
             السابق
