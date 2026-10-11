@@ -53,6 +53,10 @@ select {
   font-style: italic;
 }
 
+.admin-arabic-font {
+  font-family: var(--font-arabic), Arial, sans-serif;
+}
+
 /* Cormorant/Manrope carry no Arabic glyphs, so RTL swaps to the Arabic
    webfont everywhere instead of silently falling back to a system serif. */
 html[dir="rtl"] body {

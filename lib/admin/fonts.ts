@@ -1,8 +1,4 @@
-import { Cairo } from "next/font/google";
-
-// Arabic-capable typeface for the admin dashboard only — the storefront
-// keeps its own fonts (Manrope/Cormorant Garamond) untouched.
-export const cairo = Cairo({
-  subsets: ["arabic", "latin"],
-  weight: ["400", "500", "600", "700"],
-});
+// Keep the admin dashboard independent from a build-time remote font fetch.
+// The global layout already provides the optional Arabic font;
+// this fallback remains usable when that font is unavailable.
+export const cairo = { className: "admin-arabic-font" };
