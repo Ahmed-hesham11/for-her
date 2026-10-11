@@ -32,14 +32,14 @@ export default async function HomePage() {
             overlaid on top, to keep the artwork fully clear. */}
         <section>
           <div className="animate-fade-in relative isolate overflow-hidden rounded-[30px] shadow-[0_24px_60px_rgba(64,39,31,0.12)]">
-            <div className="relative aspect-[4/5] w-full overflow-hidden sm:aspect-[3/2] md:aspect-[2000/750]">
+            <div className="relative aspect-[2048/768] w-full overflow-hidden">
               <Image
                 src="/hero-banner.webp"
                 alt="FOR HER — More than a look. New Arrivals: your style, always here. Fashion, accessories, and more."
                 fill
                 priority
                 sizes="100vw"
-                className="animate-hero-zoom object-cover object-[30%_center] md:object-center"
+                className="animate-hero-zoom object-contain"
               />
             </div>
           </div>

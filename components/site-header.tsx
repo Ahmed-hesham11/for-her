@@ -49,7 +49,7 @@ export function SiteHeader() {
   return (
     <header className={`sticky top-0 z-30 border-b border-[#eadfda] bg-[#f7f1ee]/95 text-[#1f1a19] backdrop-blur transition-shadow duration-300 ${scrolled ? "shadow-[0_4px_20px_rgba(41,25,20,0.06)]" : "shadow-none"}`}>
       <div className="mx-auto max-w-[1440px] px-4 py-3 md:px-8">
-        <div className="flex items-center justify-between gap-4">
+        <div className="hidden items-center justify-between gap-4 md:flex">
           <div className="hidden flex-1 items-center md:flex">
             <HeaderSearch className="max-w-[280px]" />
           </div>
@@ -150,6 +150,57 @@ export function SiteHeader() {
             >
               <MenuIcon className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+
+        <div className="md:hidden">
+          <div className="flex justify-center pb-3">
+            <Link href="/" className="brand-serif text-[2.35rem] leading-none tracking-[-0.04em] text-[#1b1817]">
+              FOR HER
+            </Link>
+          </div>
+
+          <div className="flex items-center justify-between gap-3 border-t border-[#ebddd7] pt-3">
+            <LanguageToggle />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMobileSearchOpen((open) => !open)}
+                className={ICON_BUTTON_CLASS}
+                aria-label={t.header.searchAriaButton}
+                aria-expanded={mobileSearchOpen}
+              >
+                <SearchIcon className="h-4 w-4" />
+              </button>
+
+              <Link href="/wishlist" className={`relative ${ICON_BUTTON_CLASS}`} aria-label={t.header.wishlistAria}>
+                <HeartIcon className="h-4 w-4" />
+                {wishlistCount > 0 ? (
+                  <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1f1b1a] px-1 text-[0.58rem] font-semibold text-white">
+                    {wishlistCount}
+                  </span>
+                ) : null}
+              </Link>
+
+              <Link href="/cart" className={`relative ${ICON_BUTTON_CLASS}`} aria-label={t.header.cartAria}>
+                <BagIcon className="h-4 w-4" />
+                {cartCount > 0 ? (
+                  <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1f1b1a] px-1 text-[0.58rem] font-semibold text-white">
+                    {cartCount}
+                  </span>
+                ) : null}
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => setMobileOpen((open) => !open)}
+                className={ICON_BUTTON_CLASS}
+                aria-label={t.header.menuAria}
+                aria-expanded={mobileOpen}
+              >
+                <MenuIcon className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
 
