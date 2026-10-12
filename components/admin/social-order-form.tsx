@@ -1,8 +1,9 @@
 "use client";
 
+import { uploadMedia } from "@/lib/admin/upload-client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createManualOrderAction, uploadCatalogImageAction } from "@/lib/admin/actions";
+import { createManualOrderAction } from "@/lib/admin/actions";
 import type { ProductPricedOption } from "@/lib/admin/products";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ProductPicker } from "@/components/admin/product-picker";
@@ -87,7 +88,7 @@ export function SocialOrderForm({ products, shippingRates }: { products: Product
 
           let imageUrl = line.customImageUrl || null;
           if (line.customImageFile) {
-            const { url, error: uploadError } = await uploadCatalogImageAction(line.customImageFile, "orders");
+            const { url, error: uploadError } = await uploadMedia(line.customImageFile, "orders");
             if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع صورة هذا المنتج الآن.");
             imageUrl = url;
           }

@@ -52,3 +52,4 @@ npm run start
 - Set the three environment variables above in the hosting platform's project settings — `SUPABASE_SERVICE_ROLE_KEY` must stay server-only.
 - Run any new files in `supabase/migrations/` against the production database before deploying code that depends on them.
 - `middleware.ts` protects all `/admin/*` routes; confirm an admin-role profile exists before relying on it in production.
+- Product/category/order images and product videos are stored on the server's disk, not Supabase Storage. Set `UPLOAD_DIR` to a persistent folder outside the deploy directory (e.g. `/var/www/for-her-uploads`) and `NEXT_PUBLIC_SITE_URL` to the site's public URL (e.g. `https://example.com`). Files are served from `/uploads/*`. Back this folder up, and if nginx fronts the app set `client_max_body_size 200m;`.

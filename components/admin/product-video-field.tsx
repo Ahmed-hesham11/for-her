@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 200 * 1024 * 1024;
 
 export type VideoSlot = { key: string; url: string; file: File | null; previewUrl: string | null };
 
@@ -39,7 +39,7 @@ export function ProductVideoField({
         continue;
       }
       if (file.size > MAX_VIDEO_BYTES) {
-        setError("يجب ألا يتجاوز حجم الفيديو 50 ميجابايت.");
+        setError("يجب ألا يتجاوز حجم الفيديو 200 ميجابايت.");
         continue;
       }
       added.push({ key: crypto.randomUUID(), url: "", file, previewUrl: URL.createObjectURL(file) });
@@ -78,7 +78,7 @@ export function ProductVideoField({
       >
         + إضافة فيديو
       </button>
-      <p className="text-xs text-[#8a7c78]">الحد الأقصى لحجم الفيديو 50 ميجابايت (MP4 أو WebM مفضّل).</p>
+      <p className="text-xs text-[#8a7c78]">الحد الأقصى لحجم الفيديو 200 ميجابايت (MP4 أو WebM مفضّل).</p>
       {error ? <p className="text-xs text-[#7a3a32]">{error}</p> : null}
     </div>
   );

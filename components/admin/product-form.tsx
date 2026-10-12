@@ -1,10 +1,10 @@
 "use client";
 
+import { uploadMedia } from "@/lib/admin/upload-client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import type { CategoryTreeOption, ProductInput } from "@/lib/admin/products";
-import { createProductAction, updateProductAction, uploadCatalogImageAction, createCatalogVideoUploadAction } from "@/lib/admin/actions";
-import { createClient } from "@supabase/supabase-js";
+import { createProductAction, updateProductAction } from "@/lib/admin/actions";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ProductGalleryField, type GalleryImageSlot } from "@/components/admin/product-gallery-field";
 import { ProductVideoField, type VideoSlot } from "@/components/admin/product-video-field";
@@ -33,21 +33,6 @@ const DEFAULT_PRODUCT: ProductInput = {
 // generated automatically at save time (see handleSubmit).
 function generateSku(): string {
   return `SKU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-}
-
-// Uploads straight from the browser to Storage with a one-time signed URL
-// (minted by an admin-only server action) — videos are too big for a Server
-// Action body.
-async function uploadVideo(file: File): Promise<string> {
-  const ticket = await createCatalogVideoUploadAction(file.name, file.type, file.size);
-  if (ticket.error || !ticket.path || !ticket.token || !ticket.publicUrl) throw new Error(ticket.error ?? "تعذّر رفع هذا الفيديو الآن.");
-
-  const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "", {
-    auth: { persistSession: false, autoRefreshToken: false },
-  }).storage.from("catalog-images");
-  const { error } = await storage.uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
-  if (error) throw new Error(error.message);
-  return ticket.publicUrl;
 }
 
 function validate(fields: ProductInput): string | null {
@@ -128,7 +113,7 @@ export function ProductForm({
       // they were picked in the fields above.
       let submitFields = fields;
       if (pendingImageFile) {
-        const { url, error: uploadError } = await uploadCatalogImageAction(pendingImageFile, "products");
+        const { url, error: uploadError } = await uploadMedia(pendingImageFile, "products");
         if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع هذه الصورة الآن.");
         submitFields = { ...submitFields, image_url: url };
       }
@@ -136,7 +121,7 @@ export function ProductForm({
       const resolvedGallerySlots: GalleryImageSlot[] = [];
       for (const slot of gallerySlots) {
         if (slot.file) {
-          const { url, error: uploadError } = await uploadCatalogImageAction(slot.file, "products");
+          const { url, error: uploadError } = await uploadMedia(slot.file, "products");
           if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع إحدى الصور الإضافية الآن.");
           resolvedGallerySlots.push({ ...slot, url, file: null });
         } else if (slot.url.trim()) {
@@ -148,7 +133,8 @@ export function ProductForm({
       const resolvedVideoSlots: VideoSlot[] = [];
       for (const slot of videoSlots) {
         if (slot.file) {
-          const url = await uploadVideo(slot.file);
+          const { url, error: uploadError } = await uploadMedia(slot.file, "products");
+          if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع الفيديو الآن.");
           resolvedVideoSlots.push({ ...slot, url, file: null });
         } else if (slot.url.trim()) {
           resolvedVideoSlots.push(slot);

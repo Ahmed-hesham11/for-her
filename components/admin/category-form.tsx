@@ -1,9 +1,10 @@
 "use client";
 
+import { uploadMedia } from "@/lib/admin/upload-client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import type { CategoryInput, CategoryOption } from "@/lib/admin/categories";
-import { createCategoryAction, updateCategoryAction, uploadCatalogImageAction } from "@/lib/admin/actions";
+import { createCategoryAction, updateCategoryAction } from "@/lib/admin/actions";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]";
@@ -47,7 +48,7 @@ export function CategoryForm({
       // was picked in the field above.
       let submitFields = fields;
       if (pendingImageFile) {
-        const { url, error: uploadError } = await uploadCatalogImageAction(pendingImageFile, "categories");
+        const { url, error: uploadError } = await uploadMedia(pendingImageFile, "categories");
         if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع هذه الصورة الآن.");
         submitFields = { ...fields, image_url: url };
       }
