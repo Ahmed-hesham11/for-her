@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { SiteFooter } from "@/components/site-footer";
@@ -20,6 +21,14 @@ const routeTypes: Record<string, "category" | "collection" | "info"> = {
   sale: "collection",
   "contact-us": "info",
 };
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const t = getDictionary(await getLocale());
+  const { slug } = await params;
+  const route = t.routeCatalog[slug.toLowerCase()];
+  if (!route) return {};
+  return { title: route.title, description: route.description, alternates: { canonical: `/${slug.toLowerCase()}` } };
+}
 
 export default async function DynamicCollectionPage({
   params,

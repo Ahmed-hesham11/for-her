@@ -13,6 +13,15 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ? new URL(process.env.NEXT_PUBL
 
 const nextConfig: NextConfig = {
   devIndicators: false,
+  // Account/checkout pages are per-user and must never be indexed. A header
+  // covers them all, including client-component pages that can't export metadata.
+  async headers() {
+    const noindex = [{ key: "X-Robots-Tag", value: "noindex, nofollow" }];
+    return ["cart", "checkout", "account", "orders", "wishlist", "login", "register"].flatMap((route) => [
+      { source: `/${route}`, headers: noindex },
+      { source: `/${route}/:path*`, headers: noindex },
+    ]).concat([{ source: "/admin/:path*", headers: noindex }]);
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

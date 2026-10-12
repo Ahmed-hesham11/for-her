@@ -5,6 +5,7 @@ import { CartProvider } from "@/components/cart-provider";
 import { LocaleProvider } from "@/components/locale-provider";
 import { WishlistProvider } from "@/components/wishlist-provider";
 import { getLocale } from "@/lib/i18n/get-locale";
+import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/site";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -27,8 +28,17 @@ const cairo = Cairo({
 });
 
 export const metadata: Metadata = {
-  title: "FOR HER | More Than A Look",
-  description: "Premium women's fashion, bags, jewelry, and accessories.",
+  metadataBase: new URL(getSiteUrl()),
+  title: { default: `${SITE_NAME} | ${SITE_TAGLINE}`, template: `%s | ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: `${SITE_NAME} | ${SITE_TAGLINE}`,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: { card: "summary_large_image", title: `${SITE_NAME} | ${SITE_TAGLINE}`, description: SITE_DESCRIPTION },
 };
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

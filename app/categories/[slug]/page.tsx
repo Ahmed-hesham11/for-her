@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { CategoryCard } from "@/components/category-card";
@@ -8,6 +9,13 @@ import { getDictionary } from "@/lib/i18n/translations";
 import { getCategories } from "@/lib/storefront-data-server";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const category = (await getCategories()).find((item) => item.slug === slug.toLowerCase());
+  if (!category) return {};
+  return { title: category.name, alternates: { canonical: `/categories/${category.slug}` } };
+}
 
 export default async function CategoryHubPage({
   params,
