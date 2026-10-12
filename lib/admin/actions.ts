@@ -434,3 +434,37 @@ export async function uploadCatalogImageAction(file: File, folder: string): Prom
 
   return { url: data.publicUrl, error: null };
 }
+
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+
+// Videos are too big to pass through a Server Action body, so the browser
+// uploads them straight to Storage. This only mints the one-time signed upload
+// URL (admin-checked) and returns the path/token plus the final public URL.
+export async function createCatalogVideoUploadAction(
+  fileName: string,
+  fileType: string,
+  fileSize: number,
+): Promise<{ path: string | null; token: string | null; publicUrl: string | null; error: string | null }> {
+  const { profile } = await requireAdmin();
+  const fail = (error: string) => ({ path: null, token: null, publicUrl: null, error });
+  if (!fileType.startsWith("video/")) return fail("يرجى اختيار ملف فيديو.");
+  if (fileSize > MAX_VIDEO_BYTES) return fail("يجب ألا يتجاوز حجم الفيديو 50 ميجابايت.");
+
+  const client = requireClient();
+  const extension = fileName.includes(".") ? fileName.split(".").pop() : "mp4";
+  const path = `products/${crypto.randomUUID()}.${extension}`;
+
+  const { data, error } = await client.storage.from(IMAGE_BUCKET).createSignedUploadUrl(path);
+  if (error || !data) return fail(error?.message ?? "تعذّر تجهيز رفع الفيديو.");
+
+  const { data: publicData } = client.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+
+  await logAdminAction(client, profile, {
+    action: "upload",
+    entity_type: "video",
+    entity_id: null,
+    summary: `رفع فيديو "${fileName}" إلى "products"`,
+  });
+
+  return { path, token: data.token, publicUrl: publicData.publicUrl, error: null };
+}

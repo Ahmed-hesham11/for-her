@@ -47,6 +47,7 @@ export default async function EditProductPage({
           original_price: product.original_price,
           image_url: product.image_url ?? "",
           images: product.images,
+          videos: product.videos,
           is_active: product.is_active,
           is_best_seller: product.is_best_seller,
           best_seller_order: product.best_seller_order,

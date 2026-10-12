@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import type { CategoryTreeOption, ProductInput } from "@/lib/admin/products";
-import { createProductAction, updateProductAction, uploadCatalogImageAction } from "@/lib/admin/actions";
+import { createProductAction, updateProductAction, uploadCatalogImageAction, createCatalogVideoUploadAction } from "@/lib/admin/actions";
+import { createClient } from "@supabase/supabase-js";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ProductGalleryField, type GalleryImageSlot } from "@/components/admin/product-gallery-field";
+import { ProductVideoField, type VideoSlot } from "@/components/admin/product-video-field";
 import { ProductStockField } from "@/components/admin/product-stock-field";
 
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]";
@@ -21,6 +23,7 @@ const DEFAULT_PRODUCT: ProductInput = {
   original_price: null,
   image_url: "",
   images: [],
+  videos: [],
   is_active: true,
   is_best_seller: false,
   best_seller_order: null,
@@ -30,6 +33,21 @@ const DEFAULT_PRODUCT: ProductInput = {
 // generated automatically at save time (see handleSubmit).
 function generateSku(): string {
   return `SKU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
+}
+
+// Uploads straight from the browser to Storage with a one-time signed URL
+// (minted by an admin-only server action) — videos are too big for a Server
+// Action body.
+async function uploadVideo(file: File): Promise<string> {
+  const ticket = await createCatalogVideoUploadAction(file.name, file.type, file.size);
+  if (ticket.error || !ticket.path || !ticket.token || !ticket.publicUrl) throw new Error(ticket.error ?? "تعذّر رفع هذا الفيديو الآن.");
+
+  const storage = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "", {
+    auth: { persistSession: false, autoRefreshToken: false },
+  }).storage.from("catalog-images");
+  const { error } = await storage.uploadToSignedUrl(ticket.path, ticket.token, file, { contentType: file.type });
+  if (error) throw new Error(error.message);
+  return ticket.publicUrl;
 }
 
 function validate(fields: ProductInput): string | null {
@@ -60,6 +78,9 @@ export function ProductForm({
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [gallerySlots, setGallerySlots] = useState<GalleryImageSlot[]>(() =>
     (initialProduct?.images ?? []).map((url) => ({ key: crypto.randomUUID(), url, file: null })),
+  );
+  const [videoSlots, setVideoSlots] = useState<VideoSlot[]>(() =>
+    (initialProduct?.videos ?? []).map((url) => ({ key: crypto.randomUUID(), url, file: null, previewUrl: null })),
   );
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -124,6 +145,17 @@ export function ProductForm({
       }
       submitFields = { ...submitFields, images: resolvedGallerySlots.map((slot) => slot.url) };
 
+      const resolvedVideoSlots: VideoSlot[] = [];
+      for (const slot of videoSlots) {
+        if (slot.file) {
+          const url = await uploadVideo(slot.file);
+          resolvedVideoSlots.push({ ...slot, url, file: null });
+        } else if (slot.url.trim()) {
+          resolvedVideoSlots.push(slot);
+        }
+      }
+      submitFields = { ...submitFields, videos: resolvedVideoSlots.map((slot) => slot.url) };
+
       if (!productId && !submitFields.sku.trim()) {
         submitFields = { ...submitFields, sku: generateSku() };
       }
@@ -134,6 +166,7 @@ export function ProductForm({
         setFields(submitFields);
         setPendingImageFile(null);
         setGallerySlots(resolvedGallerySlots);
+        setVideoSlots(resolvedVideoSlots);
         setSuccess("تم تحديث المنتج.");
         router.refresh();
       } else {
@@ -215,6 +248,8 @@ export function ProductForm({
       <ImageUploadField label="صورة المنتج" value={fields.image_url} onChange={(url) => update("image_url", url)} onFileSelected={setPendingImageFile} />
 
       <ProductGalleryField slots={gallerySlots} onChange={setGallerySlots} />
+
+      <ProductVideoField slots={videoSlots} onChange={setVideoSlots} />
 
       <label className="flex items-center gap-3 text-sm text-[#524947]">
         <input type="checkbox" checked={fields.is_active} onChange={(event) => update("is_active", event.target.checked)} className="h-4 w-4 accent-[#1d1a19]" />

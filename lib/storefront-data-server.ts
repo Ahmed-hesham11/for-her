@@ -168,14 +168,15 @@ export async function getProductById(id: string): Promise<Product | null> {
   if (!supabase) return null;
 
   const [{ data, error }, categories] = await Promise.all([
-    supabase.from("products").select(PRODUCT_FIELDS).eq("id", id).eq("is_active", true).maybeSingle(),
+    supabase.from("products").select(`${PRODUCT_FIELDS}, images, videos`).eq("id", id).eq("is_active", true).maybeSingle(),
     getCategories(),
   ]);
 
   if (error || !data) return null;
 
   const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
-  return mapProductRow(data, categoryNames);
+  const row = data as unknown as ProductRow & { images: string[] | null; videos: string[] | null };
+  return { ...mapProductRow(row, categoryNames), gallery: row.images ?? [], videos: row.videos ?? [] };
 }
 
 // Related products, filtered server-side by the resolved category id rather

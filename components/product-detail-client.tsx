@@ -18,6 +18,13 @@ export function ProductDetailClient({
   related: Product[];
 }) {
   const [quantity, setQuantity] = useState(1);
+  const media: { type: "image" | "video"; src: string }[] = [
+    { type: "image", src: product.image },
+    ...(product.gallery ?? []).map((src) => ({ type: "image" as const, src })),
+    ...(product.videos ?? []).map((src) => ({ type: "video" as const, src })),
+  ];
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeMedia = media[activeIndex] ?? media[0];
   const { addToCart } = useCartActions();
   const { t } = useLocale();
   const router = useRouter();
@@ -45,19 +52,51 @@ export function ProductDetailClient({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="group relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:aspect-auto md:min-h-[560px]">
-            <Image
-              src={product.image}
-              alt={product.name}
-              fill
-              priority
-              sizes="(min-width: 1024px) 55vw, 100vw"
-              className="object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
-            />
-            {isOnOffer ? (
-              <span className="absolute start-4 top-4 rounded-full bg-gradient-to-r from-[#c17a5e] to-[#9c4a37] px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.06em] text-white shadow-[0_4px_14px_rgba(156,74,55,0.4)]">
-                -{discountPercent}%
-              </span>
+          <div className="space-y-3">
+            <div className="group relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:aspect-auto md:min-h-[560px]">
+              {activeMedia.type === "video" ? (
+                <video key={activeMedia.src} src={activeMedia.src} controls playsInline autoPlay muted className="absolute inset-0 h-full w-full bg-black object-contain" />
+              ) : (
+                <Image
+                  src={activeMedia.src}
+                  alt={product.name}
+                  fill
+                  priority
+                  sizes="(min-width: 1024px) 55vw, 100vw"
+                  unoptimized={activeMedia.src !== product.image}
+                  className="object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                />
+              )}
+              {isOnOffer ? (
+                <span className="absolute start-4 top-4 rounded-full bg-gradient-to-r from-[#c17a5e] to-[#9c4a37] px-3.5 py-1.5 text-[0.68rem] font-bold uppercase tracking-[0.06em] text-white shadow-[0_4px_14px_rgba(156,74,55,0.4)]">
+                  -{discountPercent}%
+                </span>
+              ) : null}
+            </div>
+            {media.length > 1 ? (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {media.map((item, index) => (
+                  <button
+                    key={`${item.type}-${item.src}`}
+                    type="button"
+                    onClick={() => setActiveIndex(index)}
+                    aria-label={item.type === "video" ? `Video ${index + 1}` : `Image ${index + 1}`}
+                    className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-[12px] border bg-[#f4ece8] transition ${index === activeIndex ? "border-[#1d1a19]" : "border-[#ebddd7] opacity-70 hover:opacity-100"}`}
+                  >
+                    {item.type === "video" ? (
+                      <>
+                        <video src={item.src} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                        <span className="absolute inset-0 flex items-center justify-center bg-black/25 text-white">
+                          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+                        </span>
+                      </>
+                    ) : (
+                      // eslint-disable-next-line @next/next/no-img-element -- admin-entered URLs can be from any host.
+                      <img src={item.src} alt="" className="h-full w-full object-cover" />
+                    )}
+                  </button>
+                ))}
+              </div>
             ) : null}
           </div>
 

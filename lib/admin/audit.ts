@@ -12,6 +12,7 @@ export const AUDIT_ENTITY_LABELS_AR: Record<string, string> = {
   order: "طلب",
   user: "مستخدم",
   image: "صورة",
+  video: "فيديو",
 };
 
 export type AuditLogEntry = {

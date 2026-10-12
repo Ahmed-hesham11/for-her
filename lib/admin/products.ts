@@ -18,6 +18,7 @@ export type AdminProduct = {
   stock_quantity: number;
   image_url: string | null;
   images: string[];
+  videos: string[];
   is_active: boolean;
   is_best_seller: boolean;
   best_seller_order: number | null;
@@ -61,6 +62,7 @@ type ProductRow = {
   stock_quantity: number;
   image_url: string | null;
   images: string[] | null;
+  videos: string[] | null;
   is_active: boolean;
   is_best_seller: boolean;
   best_seller_order: number | null;
@@ -87,6 +89,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
     stock_quantity: Number(row.stock_quantity),
     image_url: row.image_url,
     images: row.images ?? [],
+    videos: row.videos ?? [],
     is_active: row.is_active,
     is_best_seller: row.is_best_seller,
     best_seller_order: row.best_seller_order,
@@ -94,7 +97,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
   };
 }
 
-const PRODUCT_SELECT = "id, name, sku, description, category_id, purchase_price, selling_price, original_price, stock_quantity, image_url, images, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
+const PRODUCT_SELECT = "id, name, sku, description, category_id, purchase_price, selling_price, original_price, stock_quantity, image_url, images, videos, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
 
 export async function getAdminProducts(supabase: SupabaseClient, params: ProductListParams = {}): Promise<ProductListResult> {
   const page = Math.max(1, params.page ?? 1);
@@ -195,6 +198,7 @@ export type ProductInput = {
   original_price: number | null;
   image_url: string;
   images: string[];
+  videos: string[];
   is_active: boolean;
   is_best_seller: boolean;
   best_seller_order: number | null;
@@ -224,6 +228,7 @@ export async function createProduct(supabase: SupabaseClient, input: ProductInpu
       stock_quantity: 0,
       image_url: input.image_url || null,
       images: input.images,
+      videos: input.videos,
       is_active: input.is_active,
       is_best_seller: input.is_best_seller,
       best_seller_order: input.best_seller_order,
@@ -248,6 +253,7 @@ export async function updateProduct(supabase: SupabaseClient, id: string, input:
       original_price: input.original_price,
       image_url: input.image_url || null,
       images: input.images,
+      videos: input.videos,
       is_active: input.is_active,
       is_best_seller: input.is_best_seller,
       best_seller_order: input.best_seller_order,

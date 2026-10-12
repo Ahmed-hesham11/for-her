@@ -16,6 +16,9 @@ export type Product = {
   description: string;
   sku: string;
   stock: number;
+  // Extra photos and videos — only populated on the product detail page.
+  gallery?: string[];
+  videos?: string[];
 };
 
 // A product's `category` field always stores the name of a leaf category
