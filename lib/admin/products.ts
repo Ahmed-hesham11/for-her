@@ -12,6 +12,7 @@ export type AdminProduct = {
   description: string | null;
   category_id: string;
   category_name: string;
+  supplier_id: string | null;
   purchase_price: number;
   selling_price: number;
   original_price: number | null;
@@ -56,6 +57,7 @@ type ProductRow = {
   sku: string;
   description: string | null;
   category_id: string;
+  supplier_id: string | null;
   purchase_price: number;
   selling_price: number;
   original_price: number | null;
@@ -82,6 +84,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
     sku: row.sku,
     description: row.description,
     category_id: row.category_id,
+    supplier_id: row.supplier_id,
     category_name: firstOrNull(row.categories)?.name ?? "Uncategorized",
     purchase_price: Number(row.purchase_price),
     selling_price: Number(row.selling_price),
@@ -97,7 +100,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
   };
 }
 
-const PRODUCT_SELECT = "id, name, sku, description, category_id, purchase_price, selling_price, original_price, stock_quantity, image_url, images, videos, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
+const PRODUCT_SELECT = "id, name, sku, description, category_id, supplier_id, purchase_price, selling_price, original_price, stock_quantity, image_url, images, videos, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
 
 export async function getAdminProducts(supabase: SupabaseClient, params: ProductListParams = {}): Promise<ProductListResult> {
   const page = Math.max(1, params.page ?? 1);
@@ -193,6 +196,7 @@ export type ProductInput = {
   sku: string;
   description: string;
   category_id: string;
+  supplier_id: string;
   purchase_price: number;
   selling_price: number;
   original_price: number | null;
@@ -222,6 +226,7 @@ export async function createProduct(supabase: SupabaseClient, input: ProductInpu
       sku: input.sku,
       description: input.description || null,
       category_id: input.category_id,
+      supplier_id: input.supplier_id || null,
       purchase_price: input.purchase_price,
       selling_price: input.selling_price,
       original_price: input.original_price,
@@ -248,6 +253,7 @@ export async function updateProduct(supabase: SupabaseClient, id: string, input:
       sku: input.sku,
       description: input.description || null,
       category_id: input.category_id,
+      supplier_id: input.supplier_id || null,
       purchase_price: input.purchase_price,
       selling_price: input.selling_price,
       original_price: input.original_price,

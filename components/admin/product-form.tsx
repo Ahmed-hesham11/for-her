@@ -3,7 +3,7 @@
 import { uploadMedia } from "@/lib/admin/upload-client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import type { CategoryTreeOption, ProductInput } from "@/lib/admin/products";
+import type { CategoryTreeOption, ProductInput, ProductOption } from "@/lib/admin/products";
 import { createProductAction, updateProductAction } from "@/lib/admin/actions";
 import { ImageUploadField } from "@/components/admin/image-upload-field";
 import { ProductGalleryField, type GalleryImageSlot } from "@/components/admin/product-gallery-field";
@@ -18,6 +18,7 @@ const DEFAULT_PRODUCT: ProductInput = {
   sku: "",
   description: "",
   category_id: "",
+  supplier_id: "",
   purchase_price: 0,
   selling_price: 0,
   original_price: null,
@@ -49,11 +50,13 @@ function validate(fields: ProductInput): string | null {
 
 export function ProductForm({
   categories,
+  suppliers,
   initialProduct,
   productId,
   currentStock,
 }: {
   categories: CategoryTreeOption[];
+  suppliers: ProductOption[];
   initialProduct?: ProductInput;
   productId?: string;
   currentStock?: number;
@@ -200,6 +203,16 @@ export function ProductForm({
           </select>
         </label>
       ) : null}
+
+      <label className="block space-y-1.5 text-sm text-[#4e4442]">
+        <span className={LABEL_CLASS}>المورد (اختياري)</span>
+        <select value={fields.supplier_id} onChange={(event) => update("supplier_id", event.target.value)} className={INPUT_CLASS}>
+          <option value="">بدون مورد</option>
+          {suppliers.map((supplier) => (
+            <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
+          ))}
+        </select>
+      </label>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1.5 text-sm text-[#4e4442]">

@@ -118,9 +118,9 @@ export type SuppliedProduct = {
   last_purchase_date: string;
 };
 
-// Products have no supplier_id of their own — a supplier's product list is
-// derived from purchase history (distinct products across every purchase
-// placed with that supplier), not a direct column anywhere.
+// A supplier's product list is the union of products assigned to it directly
+// (products.supplier_id) and products derived from purchase history (distinct
+// products across every purchase placed with that supplier).
 export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, supplierId: string): Promise<{ products: SuppliedProduct[]; error: string | null }> {
   const { data: purchases, error: purchasesError } = await supabase
     .from("purchases")
@@ -128,15 +128,16 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
     .eq("supplier_id", supplierId);
 
   if (purchasesError) return { products: [], error: purchasesError.message };
-  if (!purchases || purchases.length === 0) return { products: [], error: null };
 
-  const purchaseDateById = new Map((purchases as { id: string; purchase_date: string }[]).map((row) => [row.id, row.purchase_date]));
+  const purchaseDateById = new Map(((purchases ?? []) as { id: string; purchase_date: string }[]).map((row) => [row.id, row.purchase_date]));
   const purchaseIds = Array.from(purchaseDateById.keys());
 
-  const { data: items, error: itemsError } = await supabase
-    .from("purchase_items")
-    .select("purchase_id, product_id, quantity, products(name, sku, is_active)")
-    .in("purchase_id", purchaseIds);
+  const { data: items, error: itemsError } = purchaseIds.length === 0
+    ? { data: [], error: null }
+    : await supabase
+        .from("purchase_items")
+        .select("purchase_id, product_id, quantity, products(name, sku, is_active)")
+        .in("purchase_id", purchaseIds);
 
   if (itemsError) return { products: [], error: itemsError.message };
 
@@ -174,6 +175,17 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
     const purchaseSet = purchaseIdsByProduct.get(row.product_id) ?? new Set<string>();
     purchaseSet.add(row.purchase_id);
     purchaseIdsByProduct.set(row.product_id, purchaseSet);
+  }
+
+  const { data: assigned, error: assignedError } = await supabase
+    .from("products")
+    .select("id, name, sku, is_active")
+    .eq("supplier_id", supplierId);
+  if (assignedError) return { products: [], error: assignedError.message };
+
+  for (const row of (assigned ?? []) as { id: string; name: string; sku: string | null; is_active: boolean }[]) {
+    if (byProduct.has(row.id)) continue;
+    byProduct.set(row.id, { product_id: row.id, product_name: row.name, sku: row.sku, is_active: row.is_active, total_quantity: 0, purchase_count: 0, last_purchase_date: "" });
   }
 
   const products = Array.from(byProduct.values()).map((product) => ({

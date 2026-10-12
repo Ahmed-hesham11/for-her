@@ -1,6 +1,6 @@
 import { ProductForm } from "@/components/admin/product-form";
 import { ErrorState } from "@/components/admin/empty-state";
-import { getCategoryOptions } from "@/lib/admin/products";
+import { getCategoryOptions, getSupplierOptions } from "@/lib/admin/products";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function NewProductPage() {
@@ -10,7 +10,7 @@ export default async function NewProductPage() {
     return <ErrorState message="لم يتم إعداد Supabase." />;
   }
 
-  const categories = await getCategoryOptions(supabase);
+  const [categories, suppliers] = await Promise.all([getCategoryOptions(supabase), getSupplierOptions(supabase)]);
 
   return (
     <div className="space-y-6">
@@ -19,7 +19,7 @@ export default async function NewProductPage() {
         <h1 className="brand-serif text-[2.6rem] leading-none text-[#1d1918]">إضافة منتج</h1>
       </div>
 
-      <ProductForm categories={categories} />
+      <ProductForm categories={categories} suppliers={suppliers} />
     </div>
   );
 }

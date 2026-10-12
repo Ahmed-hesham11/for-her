@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { ErrorState } from "@/components/admin/empty-state";
 import { ProductForm } from "@/components/admin/product-form";
-import { getAdminProductById, getCategoryOptions } from "@/lib/admin/products";
+import { getAdminProductById, getCategoryOptions, getSupplierOptions } from "@/lib/admin/products";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export default async function EditProductPage({
@@ -16,9 +16,10 @@ export default async function EditProductPage({
     return <ErrorState message="لم يتم إعداد Supabase." />;
   }
 
-  const [product, categories] = await Promise.all([
+  const [product, categories, suppliers] = await Promise.all([
     getAdminProductById(supabase, id),
     getCategoryOptions(supabase),
+    getSupplierOptions(supabase),
   ]);
 
   if (!product) {
@@ -36,12 +37,14 @@ export default async function EditProductPage({
       <ProductForm
         productId={product.id}
         categories={categories}
+        suppliers={suppliers}
         currentStock={product.stock_quantity}
         initialProduct={{
           name: product.name,
           sku: product.sku,
           description: product.description ?? "",
           category_id: product.category_id,
+          supplier_id: product.supplier_id ?? "",
           purchase_price: product.purchase_price,
           selling_price: product.selling_price,
           original_price: product.original_price,

@@ -9,7 +9,7 @@ export function SupplierProductsTable({ products }: { products: SuppliedProduct[
   const router = useRouter();
 
   if (products.length === 0) {
-    return <EmptyState title="لا توجد منتجات من هذا المورد بعد." description="تظهر المنتجات هنا بعد تسجيل أول عملية شراء من هذا المورد." />;
+    return <EmptyState title="لا توجد منتجات من هذا المورد بعد." description="تظهر المنتجات هنا عند اختيار هذا المورد في المنتج، أو بعد تسجيل أول عملية شراء منه." />;
   }
 
   return (
