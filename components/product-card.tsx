@@ -21,13 +21,16 @@ export function ProductCard({ product, style, className }: { product: Product; s
   // just shows its product image as usual.
   const colors = product.colors ?? [];
   const hasColorChoice = colors.length > 1;
-  const [selectedColorId, setSelectedColorId] = useState<string | null>(colors[0]?.id ?? null);
-  const selectedColor = colors.find((color) => color.id === selectedColorId) ?? colors[0] ?? null;
-  const displayImage = selectedColor?.image ?? product.image;
+  // With a real choice, the card shows the product's own main image until a
+  // swatch is clicked (clicking the same swatch again goes back to it). A
+  // lone color is chosen automatically.
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(null);
+  const selectedColor = hasColorChoice ? (colors.find((color) => color.id === selectedColorId) ?? null) : (colors[0] ?? null);
+  const displayImage = (hasColorChoice ? selectedColor?.image : undefined) ?? product.image;
   const imageFailed = failedImage === displayImage;
   // A size can't be chosen from the card, so those products send the shopper
   // to the product page instead of adding blind.
-  const needsOptions = Boolean(product.hasSizes);
+  const needsOptions = Boolean(product.hasSizes) || (hasColorChoice && !selectedColor);
   const isOnOffer = product.originalPrice !== null && product.originalPrice > product.price;
   const discountPercent = isOnOffer ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0;
 
@@ -74,7 +77,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
                 <button
                   key={color.id}
                   type="button"
-                  onClick={() => setSelectedColorId(color.id)}
+                  onClick={() => setSelectedColorId(isSelected ? null : color.id)}
                   aria-label={t.productCard.showColor(color.name)}
                   aria-pressed={isSelected}
                   title={color.name}

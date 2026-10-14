@@ -45,6 +45,8 @@ export async function uploadPendingSlots(slots: ImageSlot[], uploaded: string[])
 }
 
 const SMALL_BUTTON = "rounded-full border border-[#e4d4cd] bg-white px-2.5 py-1 text-[0.64rem] font-medium text-[#4a4442] transition hover:bg-[#f2e7df] disabled:cursor-not-allowed disabled:opacity-40";
+// Round icon buttons laid over each thumbnail.
+const ICON_BUTTON = "flex h-7 w-7 items-center justify-center rounded-full bg-white/95 text-sm leading-none text-[#2b201d] shadow-sm transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-30";
 
 export function ImageListField({
   label,
@@ -65,6 +67,8 @@ export function ImageListField({
   const replaceKeyRef = useRef<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [urlDraft, setUrlDraft] = useState("");
+  const [showUrl, setShowUrl] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
   const [failedKeys, setFailedKeys] = useState<Set<string>>(new Set());
 
   // Object URLs are revoked as soon as no slot uses them any more, and for
@@ -97,6 +101,10 @@ export function ImageListField({
   const handleAddFiles = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files ?? []);
     event.target.value = "";
+    addFiles(files);
+  };
+
+  const addFiles = (files: File[]) => {
     if (files.length === 0) return;
 
     const problems: string[] = [];
@@ -150,104 +158,128 @@ export function ImageListField({
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <div>
         <span className="text-[0.72rem] text-[#7a6762]">{label}</span>
         {hint ? <p className="mt-0.5 text-xs text-[#8a7c78]">{hint}</p> : null}
       </div>
 
-      {slots.length > 0 ? (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {slots.map((slot, index) => {
-            const src = slot.previewUrl ?? slot.url;
-            const failed = failedKeys.has(slot.key);
-            return (
-              <li key={slot.key} className="min-w-0 space-y-2 rounded-[16px] border border-[#eadfd7] bg-white p-2">
-                <div className="relative aspect-[4/5] overflow-hidden rounded-[12px] bg-[#f1e7e0]">
-                  {failed ? (
-                    <div className="flex h-full w-full items-center justify-center px-2 text-center text-[0.65rem] text-[#8a7c78]">تعذّر تحميل الصورة</div>
-                  ) : (
-                    // Admin-entered URLs can be from any host, and local previews are blob: URLs.
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={src}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      onError={() => setFailedKeys((current) => new Set(current).add(slot.key))}
-                      className="h-full w-full object-cover"
-                    />
-                  )}
-                  {index === 0 ? (
-                    <span className="absolute start-1.5 top-1.5 rounded-full bg-[#1d1a19] px-2 py-0.5 text-[0.6rem] font-semibold text-white">الرئيسية</span>
-                  ) : null}
-                  {slot.file ? (
-                    <span className="absolute bottom-1.5 start-1.5 rounded-full bg-white/90 px-2 py-0.5 text-[0.58rem] font-medium text-[#6b5a54]">يُرفع عند الحفظ</span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {index > 0 ? (
-                    <button type="button" disabled={disabled} onClick={() => move(index, 0)} className={SMALL_BUTTON}>
-                      جعلها رئيسية
-                    </button>
-                  ) : null}
-                  <button type="button" disabled={disabled || index === 0} onClick={() => move(index, index - 1)} className={SMALL_BUTTON} aria-label="تقديم الصورة">
-                    تقديم
+      <ul className="flex flex-wrap gap-2.5">
+        {slots.map((slot, index) => {
+          const src = slot.previewUrl ?? slot.url;
+          const failed = failedKeys.has(slot.key);
+          return (
+            <li key={slot.key} className={`relative h-28 w-24 shrink-0 overflow-hidden rounded-[14px] border bg-[#f1e7e0] ${index === 0 ? "border-[#1d1a19] ring-1 ring-[#1d1a19]" : "border-[#eadfd7]"}`}>
+              {failed ? (
+                <div className="flex h-full w-full items-center justify-center px-1 text-center text-[0.6rem] text-[#8a7c78]">تعذّر التحميل</div>
+              ) : (
+                // Admin-entered URLs can be from any host, and local previews are blob: URLs.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={src}
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  onError={() => setFailedKeys((current) => new Set(current).add(slot.key))}
+                  className="h-full w-full object-cover"
+                />
+              )}
+              {index === 0 ? (
+                <span className="absolute start-1 top-1 rounded-full bg-[#1d1a19] px-1.5 py-0.5 text-[0.55rem] font-semibold text-white">رئيسية</span>
+              ) : null}
+              <button
+                type="button"
+                disabled={disabled}
+                onClick={() => onChange(slots.filter((item) => item.key !== slot.key))}
+                aria-label="حذف الصورة"
+                title="حذف"
+                className={`${ICON_BUTTON} absolute end-1 top-1 !h-6 !w-6 text-[#8a3f34]`}
+              >
+                ×
+              </button>
+              <div className="absolute inset-x-1 bottom-1 flex justify-between gap-1">
+                <button type="button" disabled={disabled || index === 0} onClick={() => move(index, index - 1)} aria-label="تقديم الصورة" title="تقديم" className={ICON_BUTTON}>
+                  <span className="rtl:hidden">‹</span>
+                  <span className="hidden rtl:inline">›</span>
+                </button>
+                {index > 0 ? (
+                  <button type="button" disabled={disabled} onClick={() => move(index, 0)} aria-label="جعلها الصورة الرئيسية" title="جعلها رئيسية" className={ICON_BUTTON}>
+                    ★
                   </button>
-                  <button type="button" disabled={disabled || index === slots.length - 1} onClick={() => move(index, index + 1)} className={SMALL_BUTTON} aria-label="تأخير الصورة">
-                    تأخير
-                  </button>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => {
-                      replaceKeyRef.current = slot.key;
-                      replaceInputRef.current?.click();
-                    }}
-                    className={SMALL_BUTTON}
-                  >
-                    استبدال
-                  </button>
-                  <button
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => onChange(slots.filter((item) => item.key !== slot.key))}
-                    className={`${SMALL_BUTTON} text-[#8a3f34]`}
-                  >
-                    حذف
-                  </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      ) : (
-        <p className="rounded-[14px] border border-dashed border-[#e4d4cd] bg-white/60 px-4 py-5 text-center text-xs text-[#8a7c78]">لا توجد صور بعد.</p>
-      )}
+                ) : null}
+                <button
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => {
+                    replaceKeyRef.current = slot.key;
+                    replaceInputRef.current?.click();
+                  }}
+                  aria-label="استبدال الصورة"
+                  title="استبدال"
+                  className={ICON_BUTTON}
+                >
+                  ↻
+                </button>
+                <button type="button" disabled={disabled || index === slots.length - 1} onClick={() => move(index, index + 1)} aria-label="تأخير الصورة" title="تأخير" className={ICON_BUTTON}>
+                  <span className="rtl:hidden">›</span>
+                  <span className="hidden rtl:inline">‹</span>
+                </button>
+              </div>
+              {slot.file ? <span className="absolute inset-x-0 bottom-9 bg-white/85 py-0.5 text-center text-[0.55rem] text-[#6b5a54]">يُرفع عند الحفظ</span> : null}
+            </li>
+          );
+        })}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" disabled={disabled} onClick={() => addInputRef.current?.click()} className="rounded-full border border-[#e4d4cd] bg-white px-4 py-2 text-[0.68rem] font-semibold text-[#4a4442] transition hover:bg-[#f2e7df] disabled:opacity-50">
-          + رفع صور
-        </button>
-        <input
-          id={inputId}
-          type="url"
-          value={urlDraft}
-          onChange={(event) => setUrlDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
+        <li className="shrink-0">
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={() => addInputRef.current?.click()}
+            onDragOver={(event) => {
               event.preventDefault();
-              handleAddUrl();
-            }
-          }}
-          placeholder="أو الصق رابط صورة https://..."
-          aria-label="رابط صورة"
-          disabled={disabled}
-          className="min-w-0 flex-1 rounded-full border border-[#e4d4cd] bg-white px-4 py-2 text-xs outline-none focus:border-[#c8a78f]"
-        />
-        <button type="button" disabled={disabled || !urlDraft.trim()} onClick={handleAddUrl} className={SMALL_BUTTON}>
-          إضافة رابط
+              setIsDragging(true);
+            }}
+            onDragLeave={() => setIsDragging(false)}
+            onDrop={(event) => {
+              event.preventDefault();
+              setIsDragging(false);
+              addFiles(Array.from(event.dataTransfer.files));
+            }}
+            className={`flex h-28 w-24 flex-col items-center justify-center gap-1 rounded-[14px] border border-dashed text-[#7a6762] transition disabled:opacity-50 ${isDragging ? "border-[#1d1a19] bg-[#f2e7df]" : "border-[#d9c6bc] bg-white hover:bg-[#f2e7df]"}`}
+          >
+            <span className="text-2xl leading-none">+</span>
+            <span className="text-[0.65rem] font-medium">إضافة صور</span>
+          </button>
+        </li>
+      </ul>
+
+      <div>
+        <button type="button" onClick={() => setShowUrl((value) => !value)} className="text-[0.66rem] text-[#8a5a49] underline-offset-2 hover:underline">
+          {showUrl ? "إخفاء الرابط" : "إضافة بالرابط"}
         </button>
+        {showUrl ? (
+          <div className="mt-1.5 flex items-center gap-2">
+            <input
+              id={inputId}
+              type="url"
+              value={urlDraft}
+              onChange={(event) => setUrlDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  handleAddUrl();
+                }
+              }}
+              placeholder="https://..."
+              aria-label="رابط صورة"
+              disabled={disabled}
+              className="min-w-0 flex-1 rounded-full border border-[#e4d4cd] bg-white px-4 py-2 text-xs outline-none focus:border-[#c8a78f]"
+            />
+            <button type="button" disabled={disabled || !urlDraft.trim()} onClick={handleAddUrl} className={SMALL_BUTTON}>
+              إضافة
+            </button>
+          </div>
+        ) : null}
       </div>
       <input ref={addInputRef} type="file" accept={ALLOWED_TYPES.join(",")} multiple onChange={handleAddFiles} className="hidden" />
       <input ref={replaceInputRef} type="file" accept={ALLOWED_TYPES.join(",")} onChange={handleReplaceFile} className="hidden" />

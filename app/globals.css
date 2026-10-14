@@ -25,6 +25,21 @@ html {
   overflow-x: hidden;
 }
 
+/* Almost all sizing here is rem-based, so shrinking the root font size on
+   phones scales text, spacing, buttons and headings down together instead of
+   the page feeling oversized. Tablet/desktop keep the default 16px. */
+@media (max-width: 639px) {
+  html {
+    font-size: 87.5%;
+  }
+}
+
+@media (max-width: 389px) {
+  html {
+    font-size: 81.25%;
+  }
+}
+
 body {
   margin: 0;
   min-height: 100vh;

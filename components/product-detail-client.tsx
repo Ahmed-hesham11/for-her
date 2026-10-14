@@ -21,9 +21,13 @@ export function ProductDetailClient({
   const colors = product.colors ?? [];
   const sizes = product.sizes ?? [];
   const requiresSize = sizes.length > 0;
-  // The first color is pre-selected (the page always shows some color); a size
-  // is never pre-selected — the shopper has to choose one deliberately.
-  const [selectedColorId, setSelectedColorId] = useState<string | null>(colors[0]?.id ?? null);
+  // With several colors none is pre-selected, so the product's own images
+  // (main image first) show until the shopper picks one; a size is likewise
+  // never pre-selected. A lone color is used automatically.
+  const hasColorChoice = colors.length > 1;
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(hasColorChoice ? null : (colors[0]?.id ?? null));
+  const [colorError, setColorError] = useState(false);
+  const colorGroupRef = useRef<HTMLDivElement>(null);
   const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const [sizeError, setSizeError] = useState(false);
   const sizeGroupRef = useRef<HTMLDivElement>(null);
@@ -34,14 +38,18 @@ export function ProductDetailClient({
   // the whole gallery to that color's images (its main image first). A
   // product with no color images falls back to the product's own gallery.
   const media = useMemo(() => {
+    const productImages = [product.image, ...(product.gallery ?? [])];
     const colorImages = selectedColor ? [selectedColor.image, ...(selectedColor.gallery ?? [])] : [];
-    const imageSources = colorImages.length > 0 ? colorImages : [product.image, ...(product.gallery ?? [])];
+    // A picked color (of several) shows just its own images; otherwise the
+    // product's images, plus a lone color's images after them.
+    const imageSources = hasColorChoice && selectedColor ? colorImages : [...productImages, ...colorImages];
     const uniqueImages = [...new Set(imageSources.filter(Boolean))];
     return [
       ...uniqueImages.map((src) => ({ type: "image" as const, src })),
-      ...(product.videos ?? []).map((src) => ({ type: "video" as const, src })),
+      // A selected (or lone) color's videos come first, then the product's own.
+      ...[...(selectedColor?.videos ?? []), ...(product.videos ?? [])].map((src) => ({ type: "video" as const, src })),
     ];
-  }, [selectedColor, product.image, product.gallery, product.videos]);
+  }, [selectedColor, hasColorChoice, product.image, product.gallery, product.videos]);
   const [activeIndex, setActiveIndex] = useState(0);
   const activeMedia = media[activeIndex] ?? media[0];
   const { addToCart } = useCartActions();
@@ -56,6 +64,7 @@ export function ProductDetailClient({
 
   const handleSelectColor = (colorId: string) => {
     setSelectedColorId(colorId);
+    setColorError(false);
     setActiveIndex(0);
   };
 
@@ -66,6 +75,11 @@ export function ProductDetailClient({
 
   // Returns false (and flags the Size section) when a required size is missing.
   const addSelectionToCart = async () => {
+    if (hasColorChoice && !selectedColor) {
+      setColorError(true);
+      colorGroupRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return false;
+    }
     if (requiresSize && !selectedSize) {
       setSizeError(true);
       sizeGroupRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -173,7 +187,7 @@ export function ProductDetailClient({
             </div>
 
             {colors.length > 1 ? (
-              <div role="group" aria-label={t.productDetail.color}>
+              <div ref={colorGroupRef} role="group" aria-label={t.productDetail.color}>
                 <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#786d6a]">
                   {t.productDetail.color}
                   {selectedColor ? <span className="ms-2 normal-case tracking-normal text-[#2b201d]">{selectedColor.name}</span> : null}
@@ -197,6 +211,7 @@ export function ProductDetailClient({
                     );
                   })}
                 </div>
+                {colorError ? <p role="alert" className="mt-2 text-sm text-[#9c3d2f]">{t.productDetail.colorRequired}</p> : null}
               </div>
             ) : null}
 

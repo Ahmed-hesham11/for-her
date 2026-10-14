@@ -1,13 +1,14 @@
 "use client";
 
 import { ImageListField, type ImageSlot } from "@/components/admin/image-list-field";
+import { ProductVideoField, type VideoSlot } from "@/components/admin/product-video-field";
 
 // A color being edited in the product form. `id` is set once the color exists
 // in the database, so saving updates it in place instead of recreating it.
-export type ColorDraft = { key: string; id?: string; name: string; slots: ImageSlot[] };
+export type ColorDraft = { key: string; id?: string; name: string; slots: ImageSlot[]; videoSlots: VideoSlot[] };
 
 export function newColorDraft(): ColorDraft {
-  return { key: crypto.randomUUID(), name: "", slots: [] };
+  return { key: crypto.randomUUID(), name: "", slots: [], videoSlots: [] };
 }
 
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-2.5 text-sm outline-none focus:border-[#c8a78f]";
@@ -61,6 +62,7 @@ export function ProductColorsField({
             onChange={(slots) => update(color.key, { slots })}
             disabled={disabled}
           />
+          <ProductVideoField label="فيديوهات هذا اللون (اختياري)" slots={color.videoSlots} onChange={(videoSlots) => update(color.key, { videoSlots })} />
         </div>
       ))}
 

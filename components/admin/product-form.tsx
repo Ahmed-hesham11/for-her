@@ -59,6 +59,23 @@ function validate(fields: ProductInput): string | null {
   return null;
 }
 
+// Uploads videos still held as local files and returns slots with real URLs
+// (empty ones dropped); new URLs are recorded in `uploaded` for cleanup.
+async function uploadVideoSlots(slots: VideoSlot[], uploaded: string[]): Promise<VideoSlot[]> {
+  const resolved: VideoSlot[] = [];
+  for (const slot of slots) {
+    if (slot.file) {
+      const { url, error: uploadError } = await uploadMedia(slot.file, "products");
+      if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع الفيديو الآن.");
+      uploaded.push(url);
+      resolved.push({ ...slot, url, file: null });
+    } else if (slot.url.trim()) {
+      resolved.push(slot);
+    }
+  }
+  return resolved;
+}
+
 export function ProductForm({
   categories,
   suppliers,
@@ -85,6 +102,7 @@ export function ProductForm({
       id: color.id,
       name: color.name,
       slots: slotsFromMainAndExtras(color.image_url, color.images),
+      videoSlots: color.videos.map((url) => ({ key: crypto.randomUUID(), url, file: null, previewUrl: null })),
     })),
   );
   const [hasSizes, setHasSizes] = useState(initialProduct?.has_sizes ?? false);
@@ -158,7 +176,7 @@ export function ProductForm({
     const optionsError = validateProductOptions({
       ...fields,
       has_sizes: hasSizes,
-      colors: colorDrafts.map((color) => ({ name: color.name, image_url: "", images: [] })),
+      colors: colorDrafts.map((color) => ({ name: color.name, image_url: "", images: [], videos: [] })),
       sizes: cleanSizes.map((size) => ({ label: size.label })),
       suppliers: options.suppliers,
     });
@@ -180,20 +198,15 @@ export function ProductForm({
       const resolvedImages = await uploadPendingSlots(imageSlots, uploaded);
       const resolvedColors: ColorDraft[] = [];
       for (const color of colorDrafts) {
-        resolvedColors.push({ ...color, name: color.name.trim(), slots: await uploadPendingSlots(color.slots, uploaded) });
+        resolvedColors.push({
+          ...color,
+          name: color.name.trim(),
+          slots: await uploadPendingSlots(color.slots, uploaded),
+          videoSlots: await uploadVideoSlots(color.videoSlots, uploaded),
+        });
       }
 
-      const resolvedVideoSlots: VideoSlot[] = [];
-      for (const slot of videoSlots) {
-        if (slot.file) {
-          const { url, error: uploadError } = await uploadMedia(slot.file, "products");
-          if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع الفيديو الآن.");
-          uploaded.push(url);
-          resolvedVideoSlots.push({ ...slot, url, file: null });
-        } else if (slot.url.trim()) {
-          resolvedVideoSlots.push(slot);
-        }
-      }
+      const resolvedVideoSlots = await uploadVideoSlots(videoSlots, uploaded);
 
       const { image_url, images } = splitMainAndExtras(resolvedImages);
       const submitFields: ProductInput = {
@@ -203,7 +216,12 @@ export function ProductForm({
         images,
         videos: resolvedVideoSlots.map((slot) => slot.url),
         has_sizes: hasSizes,
-        colors: resolvedColors.map((color) => ({ id: color.id, name: color.name, ...splitMainAndExtras(color.slots) })),
+        colors: resolvedColors.map((color) => ({
+          id: color.id,
+          name: color.name,
+          ...splitMainAndExtras(color.slots),
+          videos: color.videoSlots.map((slot) => slot.url),
+        })),
         sizes: hasSizes ? cleanSizes.map((size) => ({ id: size.id, label: size.label.trim() })) : [],
         suppliers: options.suppliers,
       };

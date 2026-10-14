@@ -13,6 +13,7 @@ export type ProductColor = {
   image: string;
   // The color's additional images; only populated on the product detail page.
   gallery?: string[];
+  videos?: string[];
 };
 
 export type ProductSize = { id: string; label: string };

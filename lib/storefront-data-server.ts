@@ -91,7 +91,7 @@ type ProductRow = {
   product_colors?: ColorRow[] | null;
 };
 
-type ColorRow = { id: string; name: string; image_url: string | null; images?: string[] | null; sort_order: number | null };
+type ColorRow = { id: string; name: string; image_url: string | null; images?: string[] | null; videos?: string[] | null; sort_order: number | null };
 
 function bySortOrder(a: ColorRow, b: ColorRow) {
   return (a.sort_order ?? 0) - (b.sort_order ?? 0);
@@ -102,7 +102,7 @@ function mapColors(rows: ColorRow[] | null | undefined, fallbackImage: string, w
     id: String(color.id),
     name: color.name,
     image: color.image_url || color.images?.[0] || fallbackImage,
-    ...(withGallery ? { gallery: color.images ?? [] } : {}),
+    ...(withGallery ? { gallery: color.images ?? [], videos: color.videos ?? [] } : {}),
   }));
 }
 
@@ -192,7 +192,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   if (!supabase) return null;
 
   const [{ data, error }, categories] = await Promise.all([
-    supabase.from("products").select(`${BASE_PRODUCT_FIELDS}, images, videos, product_colors(id, name, image_url, images, sort_order), product_sizes(id, label, sort_order)`).eq("id", id).eq("is_active", true).maybeSingle(),
+    supabase.from("products").select(`${BASE_PRODUCT_FIELDS}, images, videos, product_colors(id, name, image_url, images, videos, sort_order), product_sizes(id, label, sort_order)`).eq("id", id).eq("is_active", true).maybeSingle(),
     getCategories(),
   ]);
 

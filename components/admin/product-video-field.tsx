@@ -12,9 +12,11 @@ export type VideoSlot = { key: string; url: string; file: File | null; previewUr
 export function ProductVideoField({
   slots,
   onChange,
+  label = "فيديوهات (اختياري)",
 }: {
   slots: VideoSlot[];
   onChange: (slots: VideoSlot[]) => void;
+  label?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
@@ -55,7 +57,7 @@ export function ProductVideoField({
 
   return (
     <div className="space-y-3">
-      <span className="text-[0.72rem] text-[#7a6762]">فيديوهات (اختياري)</span>
+      <span className="text-[0.72rem] text-[#7a6762]">{label}</span>
       <div className="grid gap-3 sm:grid-cols-2">
         {slots.map((slot, index) => (
           <div key={slot.key} className="space-y-2 rounded-[16px] border border-[#eadfd7] bg-white p-3">

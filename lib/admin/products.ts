@@ -195,7 +195,7 @@ export async function getActiveProductOptions(supabase: SupabaseClient): Promise
 // (so saving keeps its identity — carts and past orders reference it) and
 // absent for a newly added one. image_url is the color's main image and
 // images[] its additional ones, same convention as the product itself.
-export type ProductColorInput = { id?: string; name: string; image_url: string; images: string[] };
+export type ProductColorInput = { id?: string; name: string; image_url: string; images: string[]; videos: string[] };
 export type ProductSizeInput = { id?: string; label: string };
 export type ProductSupplierInput = { supplier_id: string; purchase_price: number };
 
@@ -287,6 +287,7 @@ async function saveProductOptions(supabase: SupabaseClient, productId: string, i
       name: color.name.trim(),
       image_url: color.image_url.trim(),
       images: color.images.map((url) => url.trim()).filter(Boolean),
+      videos: color.videos.map((url) => url.trim()).filter(Boolean),
     })),
     p_sizes: input.has_sizes ? input.sizes.map((size) => ({ id: size.id ?? null, label: size.label.trim() })) : [],
     p_suppliers: input.suppliers.map((supplier) => ({
@@ -309,17 +310,18 @@ export type ProductOptions = {
 
 export async function getAdminProductOptions(supabase: SupabaseClient, productId: string): Promise<ProductOptions> {
   const [colors, sizes, suppliers] = await Promise.all([
-    supabase.from("product_colors").select("id, name, image_url, images").eq("product_id", productId).order("sort_order", { ascending: true }),
+    supabase.from("product_colors").select("id, name, image_url, images, videos").eq("product_id", productId).order("sort_order", { ascending: true }),
     supabase.from("product_sizes").select("id, label").eq("product_id", productId).order("sort_order", { ascending: true }),
     supabase.from("supplier_products").select("supplier_id, purchase_price").eq("product_id", productId).order("created_at", { ascending: true }),
   ]);
 
   return {
-    colors: ((colors.data ?? []) as { id: string; name: string; image_url: string | null; images: string[] | null }[]).map((row) => ({
+    colors: ((colors.data ?? []) as { id: string; name: string; image_url: string | null; images: string[] | null; videos: string[] | null }[]).map((row) => ({
       id: row.id,
       name: row.name,
       image_url: row.image_url ?? "",
       images: row.images ?? [],
+      videos: row.videos ?? [],
     })),
     sizes: ((sizes.data ?? []) as { id: string; label: string }[]).map((row) => ({ id: row.id, label: row.label })),
     suppliers: ((suppliers.data ?? []) as { supplier_id: string; purchase_price: number }[]).map((row) => ({
