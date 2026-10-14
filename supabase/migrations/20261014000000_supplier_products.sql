@@ -18,7 +18,6 @@
 -- Access: RLS is enabled with NO policies and no anon/authenticated grants —
 -- supplier prices are internal. Only the server (service role) can read/write,
 -- exactly like purchases and suppliers.
---
 -- Run this BEFORE 20261014010000_product_colors_sizes.sql (its
 -- admin_save_product_options function writes to this table).
 --
