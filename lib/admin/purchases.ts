@@ -116,10 +116,13 @@ export type SuppliedProduct = {
   total_quantity: number;
   purchase_count: number;
   last_purchase_date: string;
+  // The supplier's current agreed price for this product (supplier_products);
+  // null when the product is only known from past purchases.
+  purchase_price: number | null;
 };
 
-// A supplier's product list is the union of products assigned to it directly
-// (products.supplier_id) and products derived from purchase history (distinct
+// A supplier's product list is the union of products linked to it
+// (supplier_products) and products derived from purchase history (distinct
 // products across every purchase placed with that supplier).
 export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, supplierId: string): Promise<{ products: SuppliedProduct[]; error: string | null }> {
   const { data: purchases, error: purchasesError } = await supabase
@@ -169,6 +172,7 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
         total_quantity: Number(row.quantity),
         purchase_count: 0,
         last_purchase_date: purchaseDate,
+        purchase_price: null,
       });
     }
 
@@ -177,15 +181,36 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
     purchaseIdsByProduct.set(row.product_id, purchaseSet);
   }
 
-  const { data: assigned, error: assignedError } = await supabase
-    .from("products")
-    .select("id, name, sku, is_active")
+  const { data: linked, error: linkedError } = await supabase
+    .from("supplier_products")
+    .select("product_id, purchase_price, products(name, sku, is_active)")
     .eq("supplier_id", supplierId);
-  if (assignedError) return { products: [], error: assignedError.message };
+  if (linkedError) return { products: [], error: linkedError.message };
 
-  for (const row of (assigned ?? []) as { id: string; name: string; sku: string | null; is_active: boolean }[]) {
-    if (byProduct.has(row.id)) continue;
-    byProduct.set(row.id, { product_id: row.id, product_name: row.name, sku: row.sku, is_active: row.is_active, total_quantity: 0, purchase_count: 0, last_purchase_date: "" });
+  type LinkRow = {
+    product_id: string;
+    purchase_price: number;
+    products: { name: string; sku: string | null; is_active: boolean } | { name: string; sku: string | null; is_active: boolean }[] | null;
+  };
+  for (const row of (linked ?? []) as unknown as LinkRow[]) {
+    const price = Number(row.purchase_price);
+    const existing = byProduct.get(row.product_id);
+    if (existing) {
+      existing.purchase_price = price;
+      continue;
+    }
+    const product = firstOrNull(row.products);
+    if (!product) continue;
+    byProduct.set(row.product_id, {
+      product_id: row.product_id,
+      product_name: product.name,
+      sku: product.sku,
+      is_active: product.is_active,
+      total_quantity: 0,
+      purchase_count: 0,
+      last_purchase_date: "",
+      purchase_price: price,
+    });
   }
 
   const products = Array.from(byProduct.values()).map((product) => ({
@@ -199,21 +224,33 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
 
 export type NewPurchaseItem = { product_id: string; quantity: number; unit_cost: number };
 
+// Which products each supplier is linked to, and at what current price. Used
+// by the purchase form to flag linked products and pre-fill the unit cost.
+export type SupplierProductLink = { supplier_id: string; product_id: string; purchase_price: number };
+
+export async function getSupplierProductLinks(supabase: SupabaseClient): Promise<SupplierProductLink[]> {
+  const { data } = await supabase.from("supplier_products").select("supplier_id, product_id, purchase_price");
+  return ((data ?? []) as SupplierProductLink[]).map((row) => ({ ...row, purchase_price: Number(row.purchase_price) }));
+}
+
 export async function createPurchase(
   supabase: SupabaseClient,
   input: { supplier_id: string; purchase_date: string; notes: string; items: NewPurchaseItem[] },
 ): Promise<{ id: string | null; error: string | null }> {
   if (!input.supplier_id) return { id: null, error: "Supplier is required." };
   if (input.items.length === 0) return { id: null, error: "Add at least one product line." };
-  if (input.items.some((item) => !item.product_id || item.quantity < 1 || item.unit_cost < 0)) {
-    return { id: null, error: "Each line needs a product, a quantity of at least 1, and a non-negative unit cost." };
+  if (input.items.some((item) => !item.product_id || !Number.isInteger(item.quantity) || item.quantity < 1 || !Number.isFinite(item.unit_cost) || item.unit_cost < 0)) {
+    return { id: null, error: "Each line needs a product, a whole quantity of at least 1, and a non-negative unit cost." };
   }
+  // Unit costs are stored with two decimals (numeric(12,2)); round here so a
+  // float like 10.100000000000001 never reaches the database.
+  const items = input.items.map((item) => ({ ...item, unit_cost: Math.round(item.unit_cost * 100) / 100 }));
 
   const { data, error } = await supabase.rpc("admin_create_purchase", {
     p_supplier_id: input.supplier_id,
     p_purchase_date: input.purchase_date,
     p_notes: input.notes,
-    p_items: input.items,
+    p_items: items,
   });
 
   if (error) return { id: null, error: error.message };

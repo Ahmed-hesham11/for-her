@@ -14,14 +14,18 @@ const CartLineItem = memo(function CartLineItem({
   item,
   eachLabel,
   removeLabel,
+  colorLabel,
+  sizeLabel,
   onUpdateQuantity,
   onRemove,
 }: {
   item: CartItem;
   eachLabel: string;
   removeLabel: string;
-  onUpdateQuantity: (productId: string, quantity: number) => void;
-  onRemove: (productId: string) => void;
+  colorLabel: string;
+  sizeLabel: string;
+  onUpdateQuantity: (lineId: string, quantity: number) => void;
+  onRemove: (lineId: string) => void;
 }) {
   return (
     <div className="flex flex-col gap-4 rounded-[24px] border border-[#ebddd5] bg-[#fdf8f5] p-4 sm:flex-row sm:items-center">
@@ -30,14 +34,21 @@ const CartLineItem = memo(function CartLineItem({
       </div>
       <div className="flex-1">
         <h2 className="text-xl font-medium text-[#221d1b]">{item.name}</h2>
+        {item.colorName || item.sizeName ? (
+          <p className="mt-1 text-sm text-[#675e5b]">
+            {item.colorName ? <span>{colorLabel}: {item.colorName}</span> : null}
+            {item.colorName && item.sizeName ? <span aria-hidden="true"> · </span> : null}
+            {item.sizeName ? <span>{sizeLabel}: {item.sizeName}</span> : null}
+          </p>
+        ) : null}
         <p className="mt-1 text-sm text-[#675e5b]">{formatEgp(item.price)} {eachLabel}</p>
         <div className="mt-3 flex items-center justify-between gap-4">
           <div className="flex items-center overflow-hidden rounded-full border border-[#e5d7d1] bg-white text-[#2a2221]">
-            <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} className="h-10 w-10">−</button>
+            <button type="button" onClick={() => onUpdateQuantity(item.lineId, item.quantity - 1)} className="h-10 w-10">−</button>
             <span className="w-10 text-center">{item.quantity}</span>
-            <button type="button" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} className="h-10 w-10">+</button>
+            <button type="button" onClick={() => onUpdateQuantity(item.lineId, item.quantity + 1)} className="h-10 w-10">+</button>
           </div>
-          <button type="button" onClick={() => onRemove(item.id)} className="text-sm text-[#9b5d50] underline-offset-2 hover:underline">{removeLabel}</button>
+          <button type="button" onClick={() => onRemove(item.lineId)} className="text-sm text-[#9b5d50] underline-offset-2 hover:underline">{removeLabel}</button>
         </div>
       </div>
       <div className="text-left text-xl font-semibold text-[#1d1918] sm:text-right">{formatEgp(item.price * item.quantity)}</div>
@@ -81,10 +92,12 @@ export default function CartPage() {
             <div className="space-y-4">
               {items.map((item) => (
                 <CartLineItem
-                  key={item.id}
+                  key={item.lineId}
                   item={item}
                   eachLabel={t.cart.each}
                   removeLabel={t.common.remove}
+                  colorLabel={t.cart.color}
+                  sizeLabel={t.cart.size}
                   onUpdateQuantity={updateQuantity}
                   onRemove={removeFromCart}
                 />

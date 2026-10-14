@@ -60,7 +60,16 @@ export function InvoiceSheet({ order, items, className = "" }: { order: AdminOrd
                         <img src={item.image_url} alt={item.product_name} className="h-full w-full object-cover" />
                       ) : null}
                     </div>
-                    <span className="font-medium text-[#221d1b]">{item.product_name}</span>
+                    <div className="min-w-0">
+                          <span className="font-medium text-[#221d1b]">{item.product_name}</span>
+                          {item.color_name || item.size_name ? (
+                            <span className="block text-xs text-[#8a7c78]">
+                              {item.color_name ? `اللون: ${item.color_name}` : ""}
+                              {item.color_name && item.size_name ? " · " : ""}
+                              {item.size_name ? `المقاس: ${item.size_name}` : ""}
+                            </span>
+                          ) : null}
+                        </div>
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-3 py-3 text-[#8a7c78]">{item.sku ?? "—"}</td>

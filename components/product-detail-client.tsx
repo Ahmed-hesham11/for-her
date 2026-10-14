@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useCartActions } from "@/components/cart-provider";
 import { useLocale } from "@/components/locale-provider";
 import { WishlistButton } from "@/components/wishlist-button";
@@ -18,11 +18,30 @@ export function ProductDetailClient({
   related: Product[];
 }) {
   const [quantity, setQuantity] = useState(1);
-  const media: { type: "image" | "video"; src: string }[] = [
-    { type: "image", src: product.image },
-    ...(product.gallery ?? []).map((src) => ({ type: "image" as const, src })),
-    ...(product.videos ?? []).map((src) => ({ type: "video" as const, src })),
-  ];
+  const colors = product.colors ?? [];
+  const sizes = product.sizes ?? [];
+  const requiresSize = sizes.length > 0;
+  // The first color is pre-selected (the page always shows some color); a size
+  // is never pre-selected — the shopper has to choose one deliberately.
+  const [selectedColorId, setSelectedColorId] = useState<string | null>(colors[0]?.id ?? null);
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
+  const [sizeError, setSizeError] = useState(false);
+  const sizeGroupRef = useRef<HTMLDivElement>(null);
+  const selectedColor = colors.find((color) => color.id === selectedColorId) ?? colors[0] ?? null;
+  const selectedSize = sizes.find((size) => size.id === selectedSizeId) ?? null;
+
+  // Browsing images never changes the selected color; picking a color swaps
+  // the whole gallery to that color's images (its main image first). A
+  // product with no color images falls back to the product's own gallery.
+  const media = useMemo(() => {
+    const colorImages = selectedColor ? [selectedColor.image, ...(selectedColor.gallery ?? [])] : [];
+    const imageSources = colorImages.length > 0 ? colorImages : [product.image, ...(product.gallery ?? [])];
+    const uniqueImages = [...new Set(imageSources.filter(Boolean))];
+    return [
+      ...uniqueImages.map((src) => ({ type: "image" as const, src })),
+      ...(product.videos ?? []).map((src) => ({ type: "video" as const, src })),
+    ];
+  }, [selectedColor, product.image, product.gallery, product.videos]);
   const [activeIndex, setActiveIndex] = useState(0);
   const activeMedia = media[activeIndex] ?? media[0];
   const { addToCart } = useCartActions();
@@ -35,9 +54,35 @@ export function ProductDetailClient({
   // (and its Supabase dependency) into the storefront client bundle.
   const isLowStock = product.stock > 0 && product.stock <= 5;
 
+  const handleSelectColor = (colorId: string) => {
+    setSelectedColorId(colorId);
+    setActiveIndex(0);
+  };
+
+  const handleSelectSize = (sizeId: string) => {
+    setSelectedSizeId(sizeId);
+    setSizeError(false);
+  };
+
+  // Returns false (and flags the Size section) when a required size is missing.
+  const addSelectionToCart = async () => {
+    if (requiresSize && !selectedSize) {
+      setSizeError(true);
+      sizeGroupRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return false;
+    }
+    await addToCart(product, quantity, {
+      colorId: selectedColor?.id ?? null,
+      colorName: selectedColor?.name ?? null,
+      sizeId: selectedSize?.id ?? null,
+      sizeName: selectedSize?.label ?? null,
+      image: selectedColor?.image ?? null,
+    });
+    return true;
+  };
+
   const handleBuyNow = async () => {
-    await addToCart(product, quantity);
-    router.push("/checkout");
+    if (await addSelectionToCart()) router.push("/checkout");
   };
 
   return (
@@ -52,7 +97,7 @@ export function ProductDetailClient({
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="space-y-3">
+          <div className="min-w-0 space-y-3">
             <div className="group relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:aspect-auto md:min-h-[560px]">
               {activeMedia.type === "video" ? (
                 <video key={activeMedia.src} src={activeMedia.src} controls playsInline autoPlay muted className="absolute inset-0 h-full w-full bg-black object-contain" />
@@ -80,7 +125,8 @@ export function ProductDetailClient({
                     key={`${item.type}-${item.src}`}
                     type="button"
                     onClick={() => setActiveIndex(index)}
-                    aria-label={item.type === "video" ? `Video ${index + 1}` : `Image ${index + 1}`}
+                    aria-label={item.type === "video" ? t.productDetail.videoN(index + 1) : t.productDetail.imageN(index + 1)}
+                    aria-current={index === activeIndex}
                     className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-[12px] border bg-[#f4ece8] transition ${index === activeIndex ? "border-[#1d1a19]" : "border-[#ebddd7] opacity-70 hover:opacity-100"}`}
                   >
                     {item.type === "video" ? (
@@ -92,7 +138,7 @@ export function ProductDetailClient({
                       </>
                     ) : (
                       // eslint-disable-next-line @next/next/no-img-element -- admin-entered URLs can be from any host.
-                      <img src={item.src} alt="" className="h-full w-full object-cover" />
+                      <img src={item.src} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                     )}
                   </button>
                 ))}
@@ -100,11 +146,11 @@ export function ProductDetailClient({
             ) : null}
           </div>
 
-          <div className="space-y-6">
+          <div className="min-w-0 space-y-6">
             <div className="flex items-center justify-between gap-4">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[0.72rem] uppercase tracking-[0.2em] text-[#7c6a66]">{product.category}</p>
-                <h1 className="mt-2 brand-serif text-[3rem] leading-none text-[#1d1918]">{product.name}</h1>
+                <h1 className="mt-2 break-words brand-serif text-[2.4rem] leading-none text-[#1d1918] sm:text-[3rem]">{product.name}</h1>
               </div>
               <WishlistButton
                 product={product}
@@ -126,16 +172,61 @@ export function ProductDetailClient({
               ) : null}
             </div>
 
-            <div className="rounded-[18px] border border-[#eaded7] bg-[#f8f1ee] p-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[#786d6a]">{t.productDetail.sku}</span>
-                <span className="text-sm text-[#2f2826]">{product.sku}</span>
+            {colors.length > 1 ? (
+              <div role="group" aria-label={t.productDetail.color}>
+                <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#786d6a]">
+                  {t.productDetail.color}
+                  {selectedColor ? <span className="ms-2 normal-case tracking-normal text-[#2b201d]">{selectedColor.name}</span> : null}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2.5">
+                  {colors.map((color) => {
+                    const isSelected = color.id === selectedColor?.id;
+                    return (
+                      <button
+                        key={color.id}
+                        type="button"
+                        onClick={() => handleSelectColor(color.id)}
+                        aria-label={color.name}
+                        aria-pressed={isSelected}
+                        title={color.name}
+                        className={`relative h-16 w-14 shrink-0 overflow-hidden rounded-[12px] border bg-[#f4ece8] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 ${isSelected ? "border-[#1d1a19] ring-1 ring-[#1d1a19]" : "border-[#ebddd7] opacity-75 hover:opacity-100"}`}
+                      >
+                        {/* eslint-disable-next-line @next/next/no-img-element -- admin-entered URLs can be from any host. */}
+                        <img src={color.image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : null}
 
-            <p className={`text-[1rem] leading-7 ${product.description ? "text-[#5f5451]" : "italic text-[#9c8d88]"}`}>
-              {product.description || t.productDetail.noDescription}
-            </p>
+            {requiresSize ? (
+              <div ref={sizeGroupRef} role="group" aria-label={t.productDetail.size} aria-describedby={sizeError ? "size-error" : undefined}>
+                <p className="text-[0.7rem] uppercase tracking-[0.18em] text-[#786d6a]">
+                  {t.productDetail.size}
+                  {selectedSize ? <span className="ms-2 normal-case tracking-normal text-[#2b201d]">{selectedSize.label}</span> : null}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {sizes.map((size) => {
+                    const isSelected = size.id === selectedSize?.id;
+                    return (
+                      <button
+                        key={size.id}
+                        type="button"
+                        onClick={() => handleSelectSize(size.id)}
+                        aria-pressed={isSelected}
+                        className={`min-h-11 min-w-11 rounded-full border px-4 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 ${isSelected ? "border-[#1d1a19] bg-[#1d1a19] text-white" : sizeError ? "border-[#d9a79d] bg-white text-[#2f2725] hover:border-[#1d1a19]" : "border-[#e5d7d1] bg-white/80 text-[#2f2725] hover:border-[#1d1a19]"}`}
+                      >
+                        {size.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {sizeError ? (
+                  <p id="size-error" role="alert" className="mt-2 text-sm text-[#9c3d2f]">{t.productDetail.sizeRequired}</p>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center overflow-hidden rounded-full border border-[#e5d7d1] bg-white/80">
@@ -145,7 +236,7 @@ export function ProductDetailClient({
               </div>
               <button
                 type="button"
-                onClick={() => addToCart(product, quantity)}
+                onClick={() => void addSelectionToCart()}
                 className="min-h-12 min-w-0 flex-1 rounded-full bg-[#1d1a19] px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#332d2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 sm:px-6 sm:tracking-[0.16em]"
               >
                 {t.common.addToCart}
@@ -160,6 +251,18 @@ export function ProductDetailClient({
             </div>
           </div>
         </div>
+
+        <section className="mt-12 max-w-3xl space-y-5" aria-label={t.productDetail.details}>
+          <p className={`text-[1rem] leading-7 ${product.description ? "text-[#5f5451]" : "italic text-[#9c8d88]"}`}>
+            {product.description || t.productDetail.noDescription}
+          </p>
+          <div className="rounded-[18px] border border-[#eaded7] bg-[#f8f1ee] p-4">
+            <div className="flex items-center justify-between">
+              <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[#786d6a]">{t.productDetail.sku}</span>
+              <span className="text-sm text-[#2f2826]">{product.sku}</span>
+            </div>
+          </div>
+        </section>
 
         <section className="mt-16">
           <div className="mb-6 text-center">

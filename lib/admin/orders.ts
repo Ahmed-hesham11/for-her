@@ -47,6 +47,10 @@ export type AdminOrderItem = {
   unit_price: number;
   total_price: number;
   image_url: string | null;
+  // Snapshots taken when the order was placed; null for older orders and
+  // products without colors/sizes.
+  color_name: string | null;
+  size_name: string | null;
 };
 
 export type OrderListParams = {
@@ -164,7 +168,7 @@ export async function getAdminOrderById(supabase: SupabaseClient, id: string): P
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, product_id, product_name, sku, quantity, unit_price, total_price, image_url, products(image_url)")
+    .select("id, product_id, product_name, sku, quantity, unit_price, total_price, image_url, color_name, size_name, products(image_url)")
     .eq("order_id", id)
     .order("created_at", { ascending: true });
 

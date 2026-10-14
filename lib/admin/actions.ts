@@ -16,6 +16,7 @@
 // with (e.g. toggling a product by id) fetch a display name first so the
 // log reads as a sentence instead of a bare uuid.
 
+import { unlink } from "node:fs/promises";
 import { requireAdmin, requireSuperAdmin } from "@/lib/admin/auth";
 import { logAdminAction } from "@/lib/admin/audit";
 import { createCategory, updateCategory, type CategoryInput } from "@/lib/admin/categories";
@@ -35,6 +36,7 @@ import { ORDER_STATUS_LABELS_AR, PAYMENT_STATUS_LABELS_AR } from "@/lib/admin/st
 import { createSupplier, updateSupplier, type SupplierInput } from "@/lib/admin/suppliers";
 import { setUserRole } from "@/lib/admin/users";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { resolveUploadPath } from "@/lib/uploads";
 
 function requireClient() {
   if (!supabaseAdmin) throw new Error("Server is not configured.");
@@ -102,6 +104,38 @@ export async function setProductStockAction(id: string, quantity: number) {
   }
 
   return result;
+}
+
+// Cleans up files a failed product save had already uploaded: the form uploads
+// images one by one, so a later failure would otherwise strand the earlier
+// ones on disk. Only /uploads/products files that nothing in the database
+// references are removed — never an image a product, color or past order uses.
+export async function discardUploadsAction(urls: string[]) {
+  await requireAdmin();
+  const client = requireClient();
+
+  for (const url of urls.slice(0, 100)) {
+    let pathname: string;
+    try {
+      pathname = new URL(url, "http://localhost").pathname;
+    } catch {
+      continue;
+    }
+    if (!pathname.startsWith("/uploads/products/")) continue;
+
+    const [asCover, asExtra, asColorCover, asColorExtra, asOrderImage] = await Promise.all([
+      client.from("products").select("id", { count: "exact", head: true }).like("image_url", `%${pathname}`),
+      client.from("products").select("id", { count: "exact", head: true }).filter("images", "cs", JSON.stringify([url])),
+      client.from("product_colors").select("id", { count: "exact", head: true }).like("image_url", `%${pathname}`),
+      client.from("product_colors").select("id", { count: "exact", head: true }).filter("images", "cs", JSON.stringify([url])),
+      client.from("order_items").select("id", { count: "exact", head: true }).like("image_url", `%${pathname}`),
+    ]);
+    const inUse = [asCover, asExtra, asColorCover, asColorExtra, asOrderImage].some((result) => result.error || (result.count ?? 0) > 0);
+    if (inUse) continue;
+
+    const target = resolveUploadPath(pathname.replace(/^\/uploads\//, "").split("/"));
+    if (target) await unlink(target).catch(() => {});
+  }
 }
 
 export async function createProductAction(input: ProductInput) {

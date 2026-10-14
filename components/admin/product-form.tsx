@@ -3,10 +3,18 @@
 import { uploadMedia } from "@/lib/admin/upload-client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import type { CategoryTreeOption, ProductInput, ProductOption } from "@/lib/admin/products";
-import { createProductAction, updateProductAction } from "@/lib/admin/actions";
-import { ImageUploadField } from "@/components/admin/image-upload-field";
-import { ProductGalleryField, type GalleryImageSlot } from "@/components/admin/product-gallery-field";
+import { validateProductOptions, type CategoryTreeOption, type ProductInput, type ProductOption } from "@/lib/admin/products";
+import { createProductAction, discardUploadsAction, updateProductAction } from "@/lib/admin/actions";
+import {
+  ImageListField,
+  slotsFromMainAndExtras,
+  splitMainAndExtras,
+  uploadPendingSlots,
+  type ImageSlot,
+} from "@/components/admin/image-list-field";
+import { ProductColorsField, type ColorDraft } from "@/components/admin/product-colors-field";
+import { ProductSizesField, newSizeDraft, type SizeDraft } from "@/components/admin/product-sizes-field";
+import { ProductSuppliersField, type SupplierDraft } from "@/components/admin/product-suppliers-field";
 import { ProductVideoField, type VideoSlot } from "@/components/admin/product-video-field";
 import { ProductStockField } from "@/components/admin/product-stock-field";
 
@@ -18,7 +26,6 @@ const DEFAULT_PRODUCT: ProductInput = {
   sku: "",
   description: "",
   category_id: "",
-  supplier_id: "",
   purchase_price: 0,
   selling_price: 0,
   original_price: null,
@@ -28,6 +35,10 @@ const DEFAULT_PRODUCT: ProductInput = {
   is_active: true,
   is_best_seller: false,
   best_seller_order: null,
+  has_sizes: false,
+  colors: [],
+  sizes: [],
+  suppliers: [],
 };
 
 // Products no longer take a manually-typed SKU — a new product gets one
@@ -63,9 +74,25 @@ export function ProductForm({
 }) {
   const router = useRouter();
   const [fields, setFields] = useState<ProductInput>(initialProduct ?? DEFAULT_PRODUCT);
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [gallerySlots, setGallerySlots] = useState<GalleryImageSlot[]>(() =>
-    (initialProduct?.images ?? []).map((url) => ({ key: crypto.randomUUID(), url, file: null })),
+  // The product's own images: the first is the main one (products.image_url),
+  // the rest are its additional images (products.images).
+  const [imageSlots, setImageSlots] = useState<ImageSlot[]>(() =>
+    slotsFromMainAndExtras(initialProduct?.image_url ?? "", initialProduct?.images ?? []),
+  );
+  const [colorDrafts, setColorDrafts] = useState<ColorDraft[]>(() =>
+    (initialProduct?.colors ?? []).map((color) => ({
+      key: crypto.randomUUID(),
+      id: color.id,
+      name: color.name,
+      slots: slotsFromMainAndExtras(color.image_url, color.images),
+    })),
+  );
+  const [hasSizes, setHasSizes] = useState(initialProduct?.has_sizes ?? false);
+  const [sizeDrafts, setSizeDrafts] = useState<SizeDraft[]>(() =>
+    (initialProduct?.sizes ?? []).map((size) => ({ key: crypto.randomUUID(), id: size.id, label: size.label })),
+  );
+  const [supplierRows, setSupplierRows] = useState<SupplierDraft[]>(() =>
+    (initialProduct?.suppliers ?? []).map((row) => ({ key: crypto.randomUUID(), supplier_id: row.supplier_id, purchase_price: String(row.purchase_price) })),
   );
   const [videoSlots, setVideoSlots] = useState<VideoSlot[]>(() =>
     (initialProduct?.videos ?? []).map((url) => ({ key: crypto.randomUUID(), url, file: null, previewUrl: null })),
@@ -97,6 +124,26 @@ export function ProductForm({
     update("category_id", kids.length > 0 ? "" : id);
   };
 
+  // Builds the colors / sizes / suppliers part of the payload from the draft
+  // state, checking it the same way the server will.
+  const buildOptions = (): { error: string } | { suppliers: ProductInput["suppliers"] } => {
+    for (const color of colorDrafts) {
+      if (!color.name.trim()) return { error: "اسم اللون مطلوب لكل لون مضاف." };
+      if (color.slots.length === 0) return { error: `أضف صورة واحدة على الأقل للون «${color.name.trim()}».` };
+    }
+
+    const supplierInputs: ProductInput["suppliers"] = [];
+    for (const row of supplierRows) {
+      if (!row.supplier_id) return { error: "اختر المورد لكل سطر مورد، أو أزل السطر." };
+      const price = Number(row.purchase_price);
+      if (row.purchase_price.trim() === "" || !Number.isFinite(price) || price < 0) {
+        return { error: "أدخل سعر شراء صالحًا (0 أو أكثر) لكل مورد." };
+      }
+      supplierInputs.push({ supplier_id: row.supplier_id, purchase_price: price });
+    }
+    return { suppliers: supplierInputs };
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError("");
@@ -107,54 +154,75 @@ export function ProductForm({
       setError(validationError);
       return;
     }
+    const options = buildOptions();
+    if ("error" in options) {
+      setError(options.error);
+      return;
+    }
+    // An untouched placeholder row (added when "yes" is picked) isn't a size.
+    const cleanSizes = sizeDrafts.filter((size) => size.label.trim() !== "");
+    const optionsError = validateProductOptions({
+      ...fields,
+      has_sizes: hasSizes,
+      colors: colorDrafts.map((color) => ({ name: color.name, image_url: "", images: [] })),
+      sizes: cleanSizes.map((size) => ({ label: size.label })),
+      suppliers: options.suppliers,
+    });
+    if (optionsError) {
+      setError(optionsError);
+      return;
+    }
 
     if (isSaving) return;
     setIsSaving(true);
 
-    try {
-      // The image(s) only actually upload here, on save — not the moment
-      // they were picked in the fields above.
-      let submitFields = fields;
-      if (pendingImageFile) {
-        const { url, error: uploadError } = await uploadMedia(pendingImageFile, "products");
-        if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع هذه الصورة الآن.");
-        submitFields = { ...submitFields, image_url: url };
-      }
+    // Everything uploaded during this attempt — removed again if the save
+    // fails, so a failed save doesn't strand files on the server.
+    const uploaded: string[] = [];
 
-      const resolvedGallerySlots: GalleryImageSlot[] = [];
-      for (const slot of gallerySlots) {
-        if (slot.file) {
-          const { url, error: uploadError } = await uploadMedia(slot.file, "products");
-          if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع إحدى الصور الإضافية الآن.");
-          resolvedGallerySlots.push({ ...slot, url, file: null });
-        } else if (slot.url.trim()) {
-          resolvedGallerySlots.push(slot);
-        }
+    try {
+      // Images only actually upload here, on save — not the moment they
+      // were picked in the fields above.
+      const resolvedImages = await uploadPendingSlots(imageSlots, uploaded);
+      const resolvedColors: ColorDraft[] = [];
+      for (const color of colorDrafts) {
+        resolvedColors.push({ ...color, name: color.name.trim(), slots: await uploadPendingSlots(color.slots, uploaded) });
       }
-      submitFields = { ...submitFields, images: resolvedGallerySlots.map((slot) => slot.url) };
 
       const resolvedVideoSlots: VideoSlot[] = [];
       for (const slot of videoSlots) {
         if (slot.file) {
           const { url, error: uploadError } = await uploadMedia(slot.file, "products");
           if (uploadError || !url) throw new Error(uploadError ?? "تعذّر رفع الفيديو الآن.");
+          uploaded.push(url);
           resolvedVideoSlots.push({ ...slot, url, file: null });
         } else if (slot.url.trim()) {
           resolvedVideoSlots.push(slot);
         }
       }
-      submitFields = { ...submitFields, videos: resolvedVideoSlots.map((slot) => slot.url) };
 
-      if (!productId && !submitFields.sku.trim()) {
-        submitFields = { ...submitFields, sku: generateSku() };
-      }
+      const { image_url, images } = splitMainAndExtras(resolvedImages);
+      const submitFields: ProductInput = {
+        ...fields,
+        sku: !productId && !fields.sku.trim() ? generateSku() : fields.sku,
+        image_url,
+        images,
+        videos: resolvedVideoSlots.map((slot) => slot.url),
+        has_sizes: hasSizes,
+        colors: resolvedColors.map((color) => ({ id: color.id, name: color.name, ...splitMainAndExtras(color.slots) })),
+        sizes: hasSizes ? cleanSizes.map((size) => ({ id: size.id, label: size.label.trim() })) : [],
+        suppliers: options.suppliers,
+      };
 
       if (productId) {
-        const { error: updateError } = await updateProductAction(productId, submitFields);
-        if (updateError) throw new Error(updateError);
+        const result = await updateProductAction(productId, submitFields);
+        if (result.error) throw new Error(result.error);
+        // Colors/sizes just created now have real ids — keep them so the
+        // next save updates them in place rather than recreating them.
         setFields(submitFields);
-        setPendingImageFile(null);
-        setGallerySlots(resolvedGallerySlots);
+        setImageSlots(resolvedImages);
+        setColorDrafts(resolvedColors.map((color, index) => ({ ...color, id: result.optionIds?.colorIds[index] ?? color.id })));
+        setSizeDrafts(hasSizes ? cleanSizes.map((size, index) => ({ ...size, id: result.optionIds?.sizeIds[index] ?? size.id })) : []);
         setVideoSlots(resolvedVideoSlots);
         setSuccess("تم تحديث المنتج.");
         router.refresh();
@@ -164,6 +232,7 @@ export function ProductForm({
         router.push(`/admin/products/${id}`);
       }
     } catch (submitError) {
+      if (uploaded.length > 0) await discardUploadsAction(uploaded).catch(() => {});
       setError(submitError instanceof Error ? submitError.message : "تعذّر حفظ هذا المنتج الآن.");
     } finally {
       setIsSaving(false);
@@ -171,7 +240,7 @@ export function ProductForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 rounded-[20px] border border-[#eadfd7] bg-[#fbf8f5] p-6">
+    <form onSubmit={handleSubmit} className="space-y-5 rounded-[20px] border border-[#eadfd7] bg-[#fbf8f5] p-4 sm:p-6">
       <label className="block space-y-1.5 text-sm text-[#4e4442]">
         <span className={LABEL_CLASS}>اسم المنتج</span>
         <input value={fields.name} onChange={(event) => update("name", event.target.value)} className={INPUT_CLASS} required />
@@ -204,16 +273,6 @@ export function ProductForm({
         </label>
       ) : null}
 
-      <label className="block space-y-1.5 text-sm text-[#4e4442]">
-        <span className={LABEL_CLASS}>المورد (اختياري)</span>
-        <select value={fields.supplier_id} onChange={(event) => update("supplier_id", event.target.value)} className={INPUT_CLASS}>
-          <option value="">بدون مورد</option>
-          {suppliers.map((supplier) => (
-            <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
-          ))}
-        </select>
-      </label>
-
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1.5 text-sm text-[#4e4442]">
           <span className={LABEL_CLASS}>سعر البيع</span>
@@ -244,9 +303,28 @@ export function ProductForm({
         </label>
       </div>
 
-      <ImageUploadField label="صورة المنتج" value={fields.image_url} onChange={(url) => update("image_url", url)} onFileSelected={setPendingImageFile} />
+      <ImageListField
+        label="صور المنتج"
+        hint="أول صورة هي الصورة الرئيسية، ويمكنك إعادة ترتيب الصور أو استبدالها أو حذفها."
+        slots={imageSlots}
+        onChange={setImageSlots}
+        disabled={isSaving}
+      />
 
-      <ProductGalleryField slots={gallerySlots} onChange={setGallerySlots} />
+      <ProductColorsField colors={colorDrafts} onChange={setColorDrafts} disabled={isSaving} />
+
+      <ProductSizesField
+        hasSizes={hasSizes}
+        onHasSizesChange={(value) => {
+          setHasSizes(value);
+          if (value && sizeDrafts.length === 0) setSizeDrafts([newSizeDraft()]);
+        }}
+        sizes={sizeDrafts}
+        onChange={setSizeDrafts}
+        disabled={isSaving}
+      />
+
+      <ProductSuppliersField suppliers={suppliers} rows={supplierRows} onChange={setSupplierRows} disabled={isSaving} />
 
       <ProductVideoField slots={videoSlots} onChange={setVideoSlots} />
 
@@ -275,7 +353,7 @@ export function ProductForm({
         </label>
       </div>
 
-      {error ? <p className="rounded-2xl border border-[#f1c9c0] bg-[#fff5f3] px-3 py-2 text-sm text-[#7a3a32]">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-2xl border border-[#f1c9c0] bg-[#fff5f3] px-3 py-2 text-sm text-[#7a3a32]">{error}</p> : null}
       {success ? <p className="rounded-2xl border border-[#cbe6d5] bg-[#eefaf3] px-3 py-2 text-sm text-[#1e5b3d]">{success}</p> : null}
 
       <button

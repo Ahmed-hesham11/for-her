@@ -1,5 +1,6 @@
 import { ErrorState } from "@/components/admin/empty-state";
 import { PurchaseForm } from "@/components/admin/purchase-form";
+import { getSupplierProductLinks } from "@/lib/admin/purchases";
 import { getProductOptions, getSupplierOptions } from "@/lib/admin/products";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
@@ -10,9 +11,10 @@ export default async function NewPurchasePage() {
     return <ErrorState message="لم يتم إعداد Supabase." />;
   }
 
-  const [suppliers, products] = await Promise.all([
+  const [suppliers, products, links] = await Promise.all([
     getSupplierOptions(supabase),
     getProductOptions(supabase),
+    getSupplierProductLinks(supabase),
   ]);
 
   return (
@@ -27,7 +29,7 @@ export default async function NewPurchasePage() {
       ) : products.length === 0 ? (
         <ErrorState message="لا توجد منتجات بعد. أضف منتجًا قبل إنشاء عملية شراء." />
       ) : (
-        <PurchaseForm suppliers={suppliers} products={products} />
+        <PurchaseForm suppliers={suppliers} products={products} links={links} />
       )}
     </div>
   );

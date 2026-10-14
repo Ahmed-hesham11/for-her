@@ -11,12 +11,32 @@ import { useLocale } from "@/components/locale-provider";
 // one per click, while the UI itself updates on every click.
 const QUANTITY_SYNC_DELAY_MS = 400;
 
+// An optimistically-added line has no server id yet; this prefix marks it.
+const PENDING_PREFIX = "pending:";
+
+// One cart line = one (product, color, size) combination. `id` is the product
+// id; `lineId` identifies the line itself (used for quantity edits/removal).
 export type CartItem = {
+  lineId: string;
   id: string;
   name: string;
   price: number;
   image: string;
   quantity: number;
+  colorId: string | null;
+  colorName: string | null;
+  sizeId: string | null;
+  sizeName: string | null;
+};
+
+export type CartOptions = {
+  colorId?: string | null;
+  colorName?: string | null;
+  sizeId?: string | null;
+  sizeName?: string | null;
+  // The selected color's image, so the optimistic line matches what the
+  // server will return.
+  image?: string | null;
 };
 
 type CartStateValue = {
@@ -28,9 +48,9 @@ type CartStateValue = {
 };
 
 type CartActionsValue = {
-  addToCart: (product: Product, quantity?: number) => Promise<void>;
-  updateQuantity: (productId: string, quantity: number) => void;
-  removeFromCart: (productId: string) => Promise<void>;
+  addToCart: (product: Product, quantity?: number, options?: CartOptions) => Promise<void>;
+  updateQuantity: (lineId: string, quantity: number) => void;
+  removeFromCart: (lineId: string) => Promise<void>;
   clearCart: () => Promise<void>;
 };
 
@@ -59,7 +79,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Guards a remove against a double-click (or two buttons for the same
   // item) firing overlapping requests — same rationale as WishlistProvider.
   const pendingRemoveRef = useRef<Set<string>>(new Set());
-  // Pending debounce timers for in-flight quantity edits, one per product.
+  // Pending debounce timers for in-flight quantity edits, one per cart line.
   const quantityTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   useEffect(() => {
@@ -103,42 +123,70 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Updates the UI the instant a product is added, then syncs to the server
   // in the background — callers that await this (e.g. "Buy Now" navigating
   // straight to checkout) don't sit through a round trip first.
-  const addToCart = useCallback(async (product: Product, quantity = 1) => {
+  const addToCart = useCallback(async (product: Product, quantity = 1, options: CartOptions = {}) => {
     if (!user) {
       router.push("/login");
       return;
     }
 
+    const colorId = options.colorId ?? null;
+    const sizeId = options.sizeId ?? null;
+    const sameLine = (item: CartItem) => item.id === product.id && item.colorId === colorId && item.sizeId === sizeId;
+
     setError("");
     setItems((current) => {
-      const existing = current.find((item) => item.id === product.id);
-      if (existing) {
-        return current.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + quantity } : item));
+      if (current.some(sameLine)) {
+        return current.map((item) => (sameLine(item) ? { ...item, quantity: item.quantity + quantity } : item));
       }
-      return [...current, { id: product.id, name: product.name, price: product.price, image: product.image, quantity }];
+      return [
+        ...current,
+        {
+          lineId: `${PENDING_PREFIX}${product.id}:${colorId ?? ""}:${sizeId ?? ""}`,
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          image: options.image || product.image,
+          quantity,
+          colorId,
+          colorName: options.colorName ?? null,
+          sizeId,
+          sizeName: options.sizeName ?? null,
+        },
+      ];
     });
 
     try {
       const response = await fetch("/api/cart", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: product.id, quantity }),
+        body: JSON.stringify({ product_id: product.id, quantity, color_id: colorId, size_id: sizeId }),
       });
-      const nextItems = await parseItems(response);
-      if (nextItems === null) throw new Error("add failed");
-      setItems(nextItems);
+      const body = await response.json().catch(() => null);
+      if (!response.ok || !body) {
+        // The server's message is specific for option problems ("Please choose a size.").
+        setError(typeof body?.error === "string" && response.status === 400 ? body.error : t.cart.addError);
+        void loadCart();
+        return;
+      }
+      setItems((body.items ?? []) as CartItem[]);
     } catch {
       setError(t.cart.addError);
       void loadCart();
     }
   }, [user, router, t, loadCart]);
 
-  const flushQuantity = useCallback(async (productId: string, quantity: number) => {
+  const flushQuantity = useCallback(async (lineId: string, quantity: number) => {
+    // An add that hasn't come back from the server yet has no real line id;
+    // reload to pick up the authoritative cart instead of PATCHing a placeholder.
+    if (lineId.startsWith(PENDING_PREFIX)) {
+      void loadCart();
+      return;
+    }
     try {
       const response = await fetch("/api/cart", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: productId, quantity }),
+        body: JSON.stringify({ item_id: lineId, quantity }),
       });
       const nextItems = await parseItems(response);
       if (nextItems === null) throw new Error("update failed");
@@ -152,50 +200,57 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Applies the new quantity to the UI immediately on every click, but
   // debounces the actual server write so several quick +/- clicks collapse
   // into a single PATCH instead of one per click racing the next.
-  const updateQuantity = useCallback((productId: string, quantity: number) => {
+  const updateQuantity = useCallback((lineId: string, quantity: number) => {
     if (!user) return;
     const nextQuantity = Math.max(0, Math.floor(quantity));
 
     setError("");
     setItems((current) =>
       nextQuantity <= 0
-        ? current.filter((item) => item.id !== productId)
-        : current.map((item) => (item.id === productId ? { ...item, quantity: nextQuantity } : item)),
+        ? current.filter((item) => item.lineId !== lineId)
+        : current.map((item) => (item.lineId === lineId ? { ...item, quantity: nextQuantity } : item)),
     );
 
-    const pendingTimer = quantityTimers.current.get(productId);
+    const pendingTimer = quantityTimers.current.get(lineId);
     if (pendingTimer) clearTimeout(pendingTimer);
     quantityTimers.current.set(
-      productId,
+      lineId,
       setTimeout(() => {
-        quantityTimers.current.delete(productId);
-        void flushQuantity(productId, nextQuantity);
+        quantityTimers.current.delete(lineId);
+        void flushQuantity(lineId, nextQuantity);
       }, QUANTITY_SYNC_DELAY_MS),
     );
   }, [user, flushQuantity]);
 
-  const removeFromCart = useCallback(async (productId: string) => {
+  const removeFromCart = useCallback(async (lineId: string) => {
     if (!user) return;
-    if (pendingRemoveRef.current.has(productId)) return;
-    pendingRemoveRef.current.add(productId);
+    if (pendingRemoveRef.current.has(lineId)) return;
+    pendingRemoveRef.current.add(lineId);
 
     // A pending quantity edit for this item is now moot — drop it so it
     // can't fire after the item is already gone.
-    const pendingTimer = quantityTimers.current.get(productId);
+    const pendingTimer = quantityTimers.current.get(lineId);
     if (pendingTimer) {
       clearTimeout(pendingTimer);
-      quantityTimers.current.delete(productId);
+      quantityTimers.current.delete(lineId);
     }
 
     setError("");
     let removedItem: CartItem | undefined;
     setItems((current) => {
-      removedItem = current.find((item) => item.id === productId);
-      return current.filter((item) => item.id !== productId);
+      removedItem = current.find((item) => item.lineId === lineId);
+      return current.filter((item) => item.lineId !== lineId);
     });
 
+    if (lineId.startsWith(PENDING_PREFIX)) {
+      // Not saved yet — nothing to delete server-side; reload to settle.
+      pendingRemoveRef.current.delete(lineId);
+      void loadCart();
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/cart?product_id=${encodeURIComponent(productId)}`, { method: "DELETE" });
+      const response = await fetch(`/api/cart?item_id=${encodeURIComponent(lineId)}`, { method: "DELETE" });
       const nextItems = await parseItems(response);
       if (nextItems === null) throw new Error("remove failed");
       setItems(nextItems);
@@ -203,12 +258,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setError(t.cart.removeError);
       const restored = removedItem;
       if (restored) {
-        setItems((current) => (current.some((item) => item.id === restored.id) ? current : [...current, restored]));
+        setItems((current) => (current.some((item) => item.lineId === restored.lineId) ? current : [...current, restored]));
       }
     } finally {
-      pendingRemoveRef.current.delete(productId);
+      pendingRemoveRef.current.delete(lineId);
     }
-  }, [user, t]);
+  }, [user, t, loadCart]);
 
   const clearCart = useCallback(async () => {
     if (!user) {

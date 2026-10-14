@@ -6,6 +6,17 @@ export type Category = {
   parentId: string | null;
 };
 
+export type ProductColor = {
+  id: string;
+  name: string;
+  // The color's main image — all a product card needs.
+  image: string;
+  // The color's additional images; only populated on the product detail page.
+  gallery?: string[];
+};
+
+export type ProductSize = { id: string; label: string };
+
 export type Product = {
   id: string;
   name: string;
@@ -19,6 +30,11 @@ export type Product = {
   // Extra photos and videos — only populated on the product detail page.
   gallery?: string[];
   videos?: string[];
+  // Present only when the product has colors / requires a size. Cards only
+  // carry the light color list; sizes load on the detail page.
+  colors?: ProductColor[];
+  sizes?: ProductSize[];
+  hasSizes?: boolean;
 };
 
 // A product's `category` field always stores the name of a leaf category

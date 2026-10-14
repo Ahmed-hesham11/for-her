@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
-type OrderItemInput = { product_id: string; quantity: number };
+type OrderItemInput = { product_id: string; quantity: number; color_id?: string | null; size_id?: string | null };
 type OrderRequest = {
   items?: OrderItemInput[];
   coupon_code?: string;
@@ -22,6 +22,10 @@ const errorMessages: Record<string, string> = {
   INVALID_PRODUCT: "One of the products is no longer available.",
   INACTIVE_PRODUCT: "One of the products is no longer available.",
   INVALID_QUANTITY: "Each product quantity must be at least 1.",
+  COLOR_REQUIRED: "Please choose a color for each item that has color options. Remove it from your cart and add it again.",
+  INVALID_COLOR: "A selected color is no longer available. Remove that item from your cart and add it again.",
+  SIZE_REQUIRED: "Please choose a size for each item that has sizes. Remove it from your cart and add it again.",
+  INVALID_SIZE: "A selected size is no longer available. Remove that item from your cart and add it again.",
   INVALID_COUPON: "This coupon is invalid.",
   EXPIRED_COUPON: "This coupon has expired.",
   MINIMUM_ORDER_NOT_MET: "This order does not meet the coupon minimum.",
@@ -61,7 +65,14 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabaseAdmin.rpc("create_secure_order", {
       p_user_id: user.id,
-      p_items: body.items,
+      // Forward only the fields the order function reads — prices always come
+      // from the products table, never from the client.
+      p_items: (body.items ?? []).map((item) => ({
+        product_id: item.product_id,
+        quantity: item.quantity,
+        color_id: item.color_id || null,
+        size_id: item.size_id || null,
+      })),
       p_coupon_code: body.coupon_code?.trim() || null,
       p_customer_name: body.customer_name?.trim() || null,
       p_phone_1: body.phone_1?.trim() || null,

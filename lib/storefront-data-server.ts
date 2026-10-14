@@ -1,6 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
-import type { Category, Product } from "@/lib/storefront-data";
+import type { Category, Product, ProductColor } from "@/lib/storefront-data";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
@@ -87,23 +87,47 @@ type ProductRow = {
   description: string | null;
   sku: string | null;
   stock_quantity: number | null;
+  has_sizes?: boolean | null;
+  product_colors?: ColorRow[] | null;
 };
 
+type ColorRow = { id: string; name: string; image_url: string | null; images?: string[] | null; sort_order: number | null };
+
+function bySortOrder(a: ColorRow, b: ColorRow) {
+  return (a.sort_order ?? 0) - (b.sort_order ?? 0);
+}
+
+function mapColors(rows: ColorRow[] | null | undefined, fallbackImage: string, withGallery: boolean): ProductColor[] {
+  return [...(rows ?? [])].sort(bySortOrder).map((color) => ({
+    id: String(color.id),
+    name: color.name,
+    image: color.image_url || color.images?.[0] || fallbackImage,
+    ...(withGallery ? { gallery: color.images ?? [] } : {}),
+  }));
+}
+
 function mapProductRow(item: ProductRow, categoryNames: Map<string, string>): Product {
+  const image = item.image_url || FALLBACK_IMAGE;
+  const colors = mapColors(item.product_colors, image, false);
   return {
     id: String(item.id),
     name: item.name,
     price: Number(item.selling_price ?? 0),
     originalPrice: item.original_price === null ? null : Number(item.original_price),
-    image: item.image_url || FALLBACK_IMAGE,
+    image,
     category: item.category_id ? categoryNames.get(String(item.category_id)) ?? "Accessories" : "Accessories",
     description: item.description || "",
     sku: item.sku ?? "",
     stock: Number(item.stock_quantity ?? 0),
+    hasSizes: Boolean(item.has_sizes),
+    ...(colors.length > 0 ? { colors } : {}),
   };
 }
 
-const PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, sku, stock_quantity";
+const BASE_PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, sku, stock_quantity, has_sizes";
+// Listings only need each color's name + main image for the card swatches —
+// the per-color extra images are fetched on the detail page alone.
+const PRODUCT_FIELDS = `${BASE_PRODUCT_FIELDS}, product_colors(id, name, image_url, sort_order)`;
 
 const getCachedCatalog = unstable_cache(
   async (): Promise<Product[]> => {
@@ -168,15 +192,31 @@ export async function getProductById(id: string): Promise<Product | null> {
   if (!supabase) return null;
 
   const [{ data, error }, categories] = await Promise.all([
-    supabase.from("products").select(`${PRODUCT_FIELDS}, images, videos`).eq("id", id).eq("is_active", true).maybeSingle(),
+    supabase.from("products").select(`${BASE_PRODUCT_FIELDS}, images, videos, product_colors(id, name, image_url, images, sort_order), product_sizes(id, label, sort_order)`).eq("id", id).eq("is_active", true).maybeSingle(),
     getCategories(),
   ]);
 
   if (error || !data) return null;
 
   const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
-  const row = data as unknown as ProductRow & { images: string[] | null; videos: string[] | null };
-  return { ...mapProductRow(row, categoryNames), gallery: row.images ?? [], videos: row.videos ?? [] };
+  const row = data as unknown as ProductRow & {
+    images: string[] | null;
+    videos: string[] | null;
+    product_sizes: { id: string; label: string; sort_order: number | null }[] | null;
+  };
+  const mapped = mapProductRow(row, categoryNames);
+  const colors = mapColors(row.product_colors, mapped.image, true);
+  const sizes = [...(row.product_sizes ?? [])]
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((size) => ({ id: String(size.id), label: size.label }));
+  return {
+    ...mapped,
+    gallery: row.images ?? [],
+    videos: row.videos ?? [],
+    colors: colors.length > 0 ? colors : undefined,
+    sizes: row.has_sizes && sizes.length > 0 ? sizes : undefined,
+    hasSizes: Boolean(row.has_sizes) && sizes.length > 0,
+  };
 }
 
 // Related products, filtered server-side by the resolved category id rather

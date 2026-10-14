@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 type QuoteRequest = {
-  items?: { product_id: string; quantity: number }[];
+  items?: { product_id: string; quantity: number; color_id?: string | null; size_id?: string | null }[];
   coupon_code?: string;
   governorate?: string;
 };
@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     }
 
     const { data, error } = await supabaseAdmin.rpc("calculate_order_quote", {
-      p_items: body.items,
+      p_items: body.items.map((item) => ({ product_id: item.product_id, quantity: item.quantity })),
       p_coupon_code: body.coupon_code?.trim() || null,
       p_governorate: body.governorate?.trim() || null,
     });

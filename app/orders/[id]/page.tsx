@@ -11,6 +11,8 @@ type OrderItem = {
   id: string;
   product_id: string;
   product_name: string;
+  color_name: string | null;
+  size_name: string | null;
   sku: string | null;
   quantity: number;
   unit_price: number;
@@ -48,7 +50,7 @@ export default async function OrderDetailPage({
 
   const { data: items } = await supabaseAdmin
     .from("order_items")
-    .select("id, product_id, product_name, sku, quantity, unit_price, total_price")
+    .select("id, product_id, product_name, sku, quantity, unit_price, total_price, color_name, size_name")
     .eq("order_id", order.id)
     .order("created_at", { ascending: true });
 
@@ -77,6 +79,13 @@ export default async function OrderDetailPage({
                   <div key={item.id} className="flex items-center gap-4 rounded-[18px] border border-[#efdfd8] bg-white p-3">
                     <div className="flex-1">
                       <p className="text-lg font-medium text-[#221d1b]">{item.product_name}</p>
+                      {item.color_name || item.size_name ? (
+                        <p className="mt-1 text-sm text-[#625d5a]">
+                          {item.color_name ? `${t.orderDetail.color}: ${item.color_name}` : ""}
+                          {item.color_name && item.size_name ? " · " : ""}
+                          {item.size_name ? `${t.orderDetail.size}: ${item.size_name}` : ""}
+                        </p>
+                      ) : null}
                       <p className="mt-1 text-sm text-[#625d5a]">
                         {item.sku ? `${t.orderDetail.sku}: ${item.sku} · ` : ""}{t.orderDetail.qty}: {item.quantity}
                       </p>

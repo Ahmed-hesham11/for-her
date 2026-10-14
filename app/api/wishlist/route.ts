@@ -3,7 +3,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const FALLBACK_IMAGE = "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?auto=format&fit=crop&w=900&q=80";
-const PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, sku, stock_quantity";
+const PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, sku, stock_quantity, has_sizes, product_colors(id, name, image_url, sort_order)";
 
 type ProductRow = {
   id: string;
@@ -15,19 +15,29 @@ type ProductRow = {
   description: string | null;
   sku: string | null;
   stock_quantity: number | null;
+  has_sizes: boolean | null;
+  product_colors: { id: string; name: string; image_url: string | null; sort_order: number | null }[] | null;
 };
 
 function mapProductRow(row: ProductRow, categoryNames: Map<string, string>) {
+  const image = row.image_url || FALLBACK_IMAGE;
+  // Colors and the has-sizes flag let the wishlist decide whether a product
+  // can be added straight to the cart or needs its options chosen first.
+  const colors = [...(row.product_colors ?? [])]
+    .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+    .map((color) => ({ id: String(color.id), name: color.name, image: color.image_url || image }));
   return {
     id: String(row.id),
     name: row.name,
     price: Number(row.selling_price ?? 0),
     originalPrice: row.original_price === null ? null : Number(row.original_price),
-    image: row.image_url || FALLBACK_IMAGE,
+    image,
     category: row.category_id ? categoryNames.get(String(row.category_id)) ?? "Accessories" : "Accessories",
     description: row.description || "",
     sku: row.sku ?? "",
     stock: Number(row.stock_quantity ?? 0),
+    hasSizes: Boolean(row.has_sizes),
+    ...(colors.length > 0 ? { colors } : {}),
   };
 }
 

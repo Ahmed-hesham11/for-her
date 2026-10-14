@@ -60,13 +60,22 @@ export default function WishlistPage() {
                       ) : null}
                     </div>
                     <div className="mt-auto flex items-center gap-2 pt-2">
-                      <button
-                        type="button"
-                        onClick={() => addToCart(item)}
-                        className="flex-1 rounded-full bg-[#1d1a19] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#332d2b]"
-                      >
-                        {t.common.addToCart}
-                      </button>
+                      {item.hasSizes || (item.colors?.length ?? 0) > 1 ? (
+                        <Link
+                          href={`/product/${item.id}`}
+                          className="flex-1 rounded-full bg-[#1d1a19] px-4 py-2.5 text-center text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#332d2b]"
+                        >
+                          {t.productCard.selectOptions}
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => addToCart(item, 1, item.colors?.[0] ? { colorId: item.colors[0].id, colorName: item.colors[0].name, image: item.colors[0].image } : undefined)}
+                          className="flex-1 rounded-full bg-[#1d1a19] px-4 py-2.5 text-[0.65rem] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#332d2b]"
+                        >
+                          {t.common.addToCart}
+                        </button>
+                      )}
                       <button
                         type="button"
                         onClick={() => removeFromWishlist(item.id)}

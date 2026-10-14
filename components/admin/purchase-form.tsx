@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import type { NewPurchaseItem } from "@/lib/admin/purchases";
+import type { NewPurchaseItem, SupplierProductLink } from "@/lib/admin/purchases";
 import { createPurchaseAction } from "@/lib/admin/actions";
 import type { ProductOption } from "@/lib/admin/products";
 import { formatEgp } from "@/lib/currency";
@@ -10,13 +10,15 @@ import { formatEgp } from "@/lib/currency";
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-2.5 text-sm outline-none focus:border-[#c8a78f]";
 const LABEL_CLASS = "text-[0.72rem] text-[#7a6762]";
 
-type LineItem = NewPurchaseItem & { key: string };
+// autoCost: the unit cost was pre-filled from the supplier's agreed price and
+// hasn't been typed over — it can follow the supplier/product selection.
+type LineItem = NewPurchaseItem & { key: string; autoCost: boolean };
 
 function emptyLine(): LineItem {
-  return { key: crypto.randomUUID(), product_id: "", quantity: 1, unit_cost: 0 };
+  return { key: crypto.randomUUID(), product_id: "", quantity: 1, unit_cost: 0, autoCost: true };
 }
 
-export function PurchaseForm({ suppliers, products }: { suppliers: ProductOption[]; products: ProductOption[] }) {
+export function PurchaseForm({ suppliers, products, links }: { suppliers: ProductOption[]; products: ProductOption[]; links: SupplierProductLink[] }) {
   const router = useRouter();
   const [supplierId, setSupplierId] = useState("");
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().slice(0, 10));
@@ -25,8 +27,35 @@ export function PurchaseForm({ suppliers, products }: { suppliers: ProductOption
   const [error, setError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  const linkPrice = (forSupplierId: string, productId: string) =>
+    links.find((link) => link.supplier_id === forSupplierId && link.product_id === productId)?.purchase_price ?? null;
+  const isLinked = (productId: string) => Boolean(supplierId) && linkPrice(supplierId, productId) !== null;
+
   const updateLine = (key: string, patch: Partial<LineItem>) =>
     setLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+
+  // The supplier's agreed price is only a convenient default — the admin can
+  // always type the actual cost paid, and that is what gets recorded.
+  const handleProductChange = (key: string, productId: string) =>
+    setLines((current) =>
+      current.map((line) => {
+        if (line.key !== key) return line;
+        const price = supplierId ? linkPrice(supplierId, productId) : null;
+        return { ...line, product_id: productId, ...(line.autoCost ? { unit_cost: price ?? 0 } : {}) };
+      }),
+    );
+
+  const handleSupplierChange = (nextSupplierId: string) => {
+    setSupplierId(nextSupplierId);
+    setLines((current) =>
+      current.map((line) =>
+        line.autoCost && line.product_id ? { ...line, unit_cost: linkPrice(nextSupplierId, line.product_id) ?? 0 } : line,
+      ),
+    );
+  };
+
+  // Products linked to the chosen supplier come first.
+  const sortedProducts = supplierId ? [...products].sort((a, b) => Number(isLinked(b.id)) - Number(isLinked(a.id))) : products;
 
   const addLine = () => setLines((current) => [...current, emptyLine()]);
   const removeLine = (key: string) => setLines((current) => (current.length > 1 ? current.filter((line) => line.key !== key) : current));
@@ -61,7 +90,7 @@ export function PurchaseForm({ suppliers, products }: { suppliers: ProductOption
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-1.5 text-sm text-[#4e4442]">
           <span className={LABEL_CLASS}>المورد</span>
-          <select value={supplierId} onChange={(event) => setSupplierId(event.target.value)} className={INPUT_CLASS} required>
+          <select value={supplierId} onChange={(event) => handleSupplierChange(event.target.value)} className={INPUT_CLASS} required>
             <option value="">اختر مورد</option>
             {suppliers.map((supplier) => (
               <option key={supplier.id} value={supplier.id}>{supplier.name}</option>
@@ -84,10 +113,10 @@ export function PurchaseForm({ suppliers, products }: { suppliers: ProductOption
         <div className="space-y-3">
           {lines.map((line) => (
             <div key={line.key} className="grid gap-2 rounded-[16px] border border-[#eadfd7] bg-white p-3 sm:grid-cols-[1fr_100px_120px_auto] sm:items-center">
-              <select value={line.product_id} onChange={(event) => updateLine(line.key, { product_id: event.target.value })} className={INPUT_CLASS} required>
+              <select value={line.product_id} onChange={(event) => handleProductChange(line.key, event.target.value)} className={INPUT_CLASS} required>
                 <option value="">اختر منتج</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>{product.name}</option>
+                {sortedProducts.map((product) => (
+                  <option key={product.id} value={product.id}>{isLinked(product.id) ? `${product.name} ✓` : product.name}</option>
                 ))}
               </select>
               <input
@@ -105,7 +134,7 @@ export function PurchaseForm({ suppliers, products }: { suppliers: ProductOption
                 min="0"
                 step="0.01"
                 value={line.unit_cost}
-                onChange={(event) => updateLine(line.key, { unit_cost: Number(event.target.value) })}
+                onChange={(event) => updateLine(line.key, { unit_cost: Number(event.target.value), autoCost: false })}
                 placeholder="تكلفة الوحدة"
                 className={INPUT_CLASS}
                 required
@@ -118,6 +147,9 @@ export function PurchaseForm({ suppliers, products }: { suppliers: ProductOption
               >
                 إزالة
               </button>
+              {supplierId && line.product_id && !isLinked(line.product_id) ? (
+                <p className="text-xs text-[#8a6a2e] sm:col-span-4">هذا المنتج غير مرتبط بالمورد المختار. يمكنك المتابعة وإدخال التكلفة الفعلية.</p>
+              ) : null}
             </div>
           ))}
         </div>
