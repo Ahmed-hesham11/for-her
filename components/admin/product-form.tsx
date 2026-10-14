@@ -235,8 +235,6 @@ export function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 rounded-[20px] border border-[#eadfd7] bg-[#fbf8f5] p-4 sm:p-6">
-      <ProductSuppliersField suppliers={suppliers} selectedIds={supplierIds} onChange={setSupplierIds} disabled={isSaving} />
-
       <label className="block space-y-1.5 text-sm text-[#4e4442]">
         <span className={LABEL_CLASS}>اسم المنتج</span>
         <input value={fields.name} onChange={(event) => update("name", event.target.value)} className={INPUT_CLASS} required />
@@ -298,6 +296,8 @@ export function ProductForm({
           <p className="text-xs text-[#8a7c78]">يتحدّث أيضًا تلقائيًا من آخر عملية شراء مستلمة لهذا المنتج عبر المشتريات.</p>
         </label>
       </div>
+
+      <ProductSuppliersField suppliers={suppliers} selectedIds={supplierIds} onChange={setSupplierIds} disabled={isSaving} />
 
       <ImageListField
         label="صور المنتج"
