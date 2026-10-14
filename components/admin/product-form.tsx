@@ -14,7 +14,7 @@ import {
 } from "@/components/admin/image-list-field";
 import { ProductColorsField, type ColorDraft } from "@/components/admin/product-colors-field";
 import { ProductSizesField, newSizeDraft, type SizeDraft } from "@/components/admin/product-sizes-field";
-import { ProductSuppliersField, type SupplierDraft } from "@/components/admin/product-suppliers-field";
+import { ProductSuppliersField } from "@/components/admin/product-suppliers-field";
 import { ProductVideoField, type VideoSlot } from "@/components/admin/product-video-field";
 import { ProductStockField } from "@/components/admin/product-stock-field";
 
@@ -91,9 +91,10 @@ export function ProductForm({
   const [sizeDrafts, setSizeDrafts] = useState<SizeDraft[]>(() =>
     (initialProduct?.sizes ?? []).map((size) => ({ key: crypto.randomUUID(), id: size.id, label: size.label })),
   );
-  const [supplierRows, setSupplierRows] = useState<SupplierDraft[]>(() =>
-    (initialProduct?.suppliers ?? []).map((row) => ({ key: crypto.randomUUID(), supplier_id: row.supplier_id, purchase_price: String(row.purchase_price) })),
-  );
+  // Suppliers are just linked here; an already-linked supplier keeps the
+  // purchase price it had (new links start at 0 — costs are entered on purchases).
+  const [supplierIds, setSupplierIds] = useState<string[]>(() => (initialProduct?.suppliers ?? []).map((row) => row.supplier_id));
+  const existingSupplierPrices = new Map((initialProduct?.suppliers ?? []).map((row) => [row.supplier_id, row.purchase_price]));
   const [videoSlots, setVideoSlots] = useState<VideoSlot[]>(() =>
     (initialProduct?.videos ?? []).map((url) => ({ key: crypto.randomUUID(), url, file: null, previewUrl: null })),
   );
@@ -132,16 +133,9 @@ export function ProductForm({
       if (color.slots.length === 0) return { error: `أضف صورة واحدة على الأقل للون «${color.name.trim()}».` };
     }
 
-    const supplierInputs: ProductInput["suppliers"] = [];
-    for (const row of supplierRows) {
-      if (!row.supplier_id) return { error: "اختر المورد لكل سطر مورد، أو أزل السطر." };
-      const price = Number(row.purchase_price);
-      if (row.purchase_price.trim() === "" || !Number.isFinite(price) || price < 0) {
-        return { error: "أدخل سعر شراء صالحًا (0 أو أكثر) لكل مورد." };
-      }
-      supplierInputs.push({ supplier_id: row.supplier_id, purchase_price: price });
-    }
-    return { suppliers: supplierInputs };
+    return {
+      suppliers: supplierIds.map((id) => ({ supplier_id: id, purchase_price: existingSupplierPrices.get(id) ?? 0 })),
+    };
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -241,6 +235,8 @@ export function ProductForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5 rounded-[20px] border border-[#eadfd7] bg-[#fbf8f5] p-4 sm:p-6">
+      <ProductSuppliersField suppliers={suppliers} selectedIds={supplierIds} onChange={setSupplierIds} disabled={isSaving} />
+
       <label className="block space-y-1.5 text-sm text-[#4e4442]">
         <span className={LABEL_CLASS}>اسم المنتج</span>
         <input value={fields.name} onChange={(event) => update("name", event.target.value)} className={INPUT_CLASS} required />
@@ -323,8 +319,6 @@ export function ProductForm({
         onChange={setSizeDrafts}
         disabled={isSaving}
       />
-
-      <ProductSuppliersField suppliers={suppliers} rows={supplierRows} onChange={setSupplierRows} disabled={isSaving} />
 
       <ProductVideoField slots={videoSlots} onChange={setVideoSlots} />
 

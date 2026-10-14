@@ -15,7 +15,6 @@ const SMALL_BUTTON = "rounded-full border border-[#e4d4cd] bg-white px-2.5 py-1 
 // Convenience only — any custom label can be typed instead.
 const PRESETS = [
   { name: "ملابس: XS – XXL", labels: ["XS", "S", "M", "L", "XL", "XXL"] },
-  { name: "أحذية: 37 – 42", labels: ["37", "38", "39", "40", "41", "42"] },
   { name: "مقاس واحد", labels: ["One Size"] },
 ];
 
