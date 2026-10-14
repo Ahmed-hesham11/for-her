@@ -101,7 +101,7 @@ export function ProductDetailClient({
 
   return (
     <div className="min-h-screen bg-[#f8f2ee] text-[#201d1b]">
-      <main className="mx-auto max-w-[1400px] px-4 py-8 md:px-8">
+      <main className="mx-auto max-w-[1400px] px-4 py-6 md:px-8 md:py-8">
         <div className="mb-8 text-sm text-[#7c6b66]">
           <Link href="/products" className="hover:text-[#b66e64]">{t.productDetail.products}</Link>
           <span className="mx-2">/</span>
@@ -110,9 +110,9 @@ export function ProductDetailClient({
           <span className="text-[#2b201d]">{product.name}</span>
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="min-w-0 space-y-3">
-            <div className="group relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:aspect-auto md:min-h-[560px]">
+        <div className="grid gap-6 md:gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-start xl:gap-12">
+          <div className="min-w-0 space-y-3 lg:sticky lg:top-24">
+            <div className="group relative aspect-[4/5] overflow-hidden rounded-[22px] border border-[#ebddd7] bg-[#f4ece8] shadow-[0_18px_40px_rgba(45,29,23,0.06)] md:mx-auto md:max-w-[560px] lg:aspect-auto lg:h-[min(66vh,720px)] lg:max-w-none">
               {activeMedia.type === "video" ? (
                 <video key={activeMedia.src} src={activeMedia.src} controls playsInline autoPlay muted className="absolute inset-0 h-full w-full bg-black object-contain" />
               ) : (
@@ -123,7 +123,7 @@ export function ProductDetailClient({
                   priority
                   sizes="(min-width: 1024px) 55vw, 100vw"
                   unoptimized={activeMedia.src !== product.image}
-                  className="object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+                  className="object-contain"
                 />
               )}
               {isOnOffer ? (
@@ -141,7 +141,7 @@ export function ProductDetailClient({
                     onClick={() => setActiveIndex(index)}
                     aria-label={item.type === "video" ? t.productDetail.videoN(index + 1) : t.productDetail.imageN(index + 1)}
                     aria-current={index === activeIndex}
-                    className={`relative h-20 w-16 shrink-0 overflow-hidden rounded-[12px] border bg-[#f4ece8] transition ${index === activeIndex ? "border-[#1d1a19]" : "border-[#ebddd7] opacity-70 hover:opacity-100"}`}
+                    className={`relative h-20 w-16 shrink-0 md:h-24 md:w-20 overflow-hidden rounded-[12px] border bg-[#f4ece8] transition ${index === activeIndex ? "border-[#1d1a19]" : "border-[#ebddd7] opacity-70 hover:opacity-100"}`}
                   >
                     {item.type === "video" ? (
                       <>
@@ -164,7 +164,7 @@ export function ProductDetailClient({
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
                 <p className="text-[0.72rem] uppercase tracking-[0.2em] text-[#7c6a66]">{product.category}</p>
-                <h1 className="mt-2 break-words brand-serif text-[2.4rem] leading-none text-[#1d1918] sm:text-[3rem]">{product.name}</h1>
+                <h1 className="mt-2 break-words brand-serif text-[2.2rem] leading-[1.05] text-[#1d1918] sm:text-[2.6rem] xl:text-[3rem]">{product.name}</h1>
               </div>
               <WishlistButton
                 product={product}
