@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Cairo, Cormorant_Garamond, Manrope } from "next/font/google";
 import { AuthProvider } from "@/components/auth-provider";
 import { CartProvider } from "@/components/cart-provider";
+import { CartToast } from "@/components/cart-toast";
+import { MetaPixelScript } from "@/components/meta-pixel-script";
+import { MetaPixelTracker } from "@/components/meta-pixel";
 import { LocaleProvider } from "@/components/locale-provider";
 import { WishlistProvider } from "@/components/wishlist-provider";
 import { getLocale } from "@/lib/i18n/get-locale";
@@ -63,10 +66,13 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
     <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} className={`${manrope.variable} ${cormorant.variable} ${cairo.variable}`}>
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: siteJsonLd }} />
+        <MetaPixelScript />
+        <MetaPixelTracker />
         <LocaleProvider initialLocale={locale}>
           <AuthProvider>
             <CartProvider>
               <WishlistProvider>{children}</WishlistProvider>
+              <CartToast />
             </CartProvider>
           </AuthProvider>
         </LocaleProvider>

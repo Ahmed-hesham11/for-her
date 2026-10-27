@@ -5,6 +5,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Product } from "@/lib/storefront-data";
 import { useAuth } from "@/components/auth-provider";
 import { useLocale } from "@/components/locale-provider";
+import { trackAddToCart } from "@/lib/meta-pixel";
 
 // How long a quantity edit waits for more clicks before it's sent to the
 // server — lets several rapid +/- clicks collapse into one PATCH instead of
@@ -39,8 +40,13 @@ export type CartOptions = {
   image?: string | null;
 };
 
+// The most recent successful add, for the "added to cart" toast. `key` changes
+// on every add so repeat adds of the same product re-trigger it.
+export type LastAdded = { key: number; name: string; image: string; colorName: string | null; sizeName: string | null };
+
 type CartStateValue = {
   items: CartItem[];
+  lastAdded: LastAdded | null;
   cartCount: number;
   subtotal: number;
   isLoading: boolean;
@@ -48,7 +54,9 @@ type CartStateValue = {
 };
 
 type CartActionsValue = {
-  addToCart: (product: Product, quantity?: number, options?: CartOptions) => Promise<void>;
+  // Resolves true once the item is in the cart, false if it wasn't added.
+  addToCart: (product: Product, quantity?: number, options?: CartOptions) => Promise<boolean>;
+  dismissLastAdded: () => void;
   updateQuantity: (lineId: string, quantity: number) => void;
   removeFromCart: (lineId: string) => Promise<void>;
   clearCart: () => Promise<void>;
@@ -76,6 +84,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [lastAdded, setLastAdded] = useState<LastAdded | null>(null);
+  const addCounter = useRef(0);
   // Guards a remove against a double-click (or two buttons for the same
   // item) firing overlapping requests — same rationale as WishlistProvider.
   const pendingRemoveRef = useRef<Set<string>>(new Set());
@@ -126,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addToCart = useCallback(async (product: Product, quantity = 1, options: CartOptions = {}) => {
     if (!user) {
       router.push("/login");
-      return;
+      return false;
     }
 
     const colorId = options.colorId ?? null;
@@ -134,6 +144,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const sameLine = (item: CartItem) => item.id === product.id && item.colorId === colorId && item.sizeId === sizeId;
 
     setError("");
+    setLastAdded({
+      key: ++addCounter.current,
+      name: product.name,
+      image: options.image || product.image,
+      colorName: options.colorName ?? null,
+      sizeName: options.sizeName ?? null,
+    });
     setItems((current) => {
       if (current.some(sameLine)) {
         return current.map((item) => (sameLine(item) ? { ...item, quantity: item.quantity + quantity } : item));
@@ -165,15 +182,22 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (!response.ok || !body) {
         // The server's message is specific for option problems ("Please choose a size.").
         setError(typeof body?.error === "string" && response.status === 400 ? body.error : t.cart.addError);
+        setLastAdded(null);
         void loadCart();
-        return;
+        return false;
       }
       setItems((body.items ?? []) as CartItem[]);
+      trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity });
+      return true;
     } catch {
       setError(t.cart.addError);
+      setLastAdded(null);
       void loadCart();
+      return false;
     }
   }, [user, router, t, loadCart]);
+
+  const dismissLastAdded = useCallback(() => setLastAdded(null), []);
 
   const flushQuantity = useCallback(async (lineId: string, quantity: number) => {
     // An add that hasn't come back from the server yet has no real line id;
@@ -295,12 +319,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
     const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-    return { items, cartCount, subtotal, isLoading, error };
-  }, [items, isLoading, error]);
+    return { items, lastAdded, cartCount, subtotal, isLoading, error };
+  }, [items, lastAdded, isLoading, error]);
 
   const actionsValue = useMemo<CartActionsValue>(
-    () => ({ addToCart, updateQuantity, removeFromCart, clearCart }),
-    [addToCart, updateQuantity, removeFromCart, clearCart],
+    () => ({ addToCart, dismissLastAdded, updateQuantity, removeFromCart, clearCart }),
+    [addToCart, dismissLastAdded, updateQuantity, removeFromCart, clearCart],
   );
 
   return (
@@ -310,7 +334,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-function useCartState() {
+export function useCartState() {
   const context = useContext(CartStateContext);
 
   if (!context) {

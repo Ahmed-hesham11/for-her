@@ -136,7 +136,7 @@ export function SiteHeader() {
             <Link href="/cart" className={`relative ${ICON_BUTTON_CLASS}`} aria-label={t.header.cartAria}>
               <BagIcon className="h-4 w-4" />
               {cartCount > 0 ? (
-                <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1f1b1a] px-1 text-[0.58rem] font-semibold text-white">
+                <span key={cartCount} className="animate-badge-bump absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1f1b1a] px-1 text-[0.58rem] font-semibold text-white">
                   {cartCount}
                 </span>
               ) : null}
@@ -185,7 +185,7 @@ export function SiteHeader() {
               <Link href="/cart" className={`relative ${ICON_BUTTON_CLASS}`} aria-label={t.header.cartAria}>
                 <BagIcon className="h-4 w-4" />
                 {cartCount > 0 ? (
-                  <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1f1b1a] px-1 text-[0.58rem] font-semibold text-white">
+                  <span key={cartCount} className="animate-badge-bump absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#1f1b1a] px-1 text-[0.58rem] font-semibold text-white">
                     {cartCount}
                   </span>
                 ) : null}

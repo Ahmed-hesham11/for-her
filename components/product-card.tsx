@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { useCartActions } from "@/components/cart-provider";
 import { useLocale } from "@/components/locale-provider";
+import { useAddFeedback } from "@/components/use-add-feedback";
 import { WishlistButton } from "@/components/wishlist-button";
 import type { Product } from "@/lib/storefront-data";
 import { formatEgp } from "@/lib/currency";
@@ -16,6 +17,7 @@ const MAX_VISIBLE_SWATCHES = 5;
 export function ProductCard({ product, style, className }: { product: Product; style?: CSSProperties; className?: string }) {
   const { addToCart } = useCartActions();
   const { t } = useLocale();
+  const { status: addStatus, run: runAdd } = useAddFeedback();
   const [failedImage, setFailedImage] = useState<string | null>(null);
   // Swatches only exist when there is a real choice (2+ colors); a lone color
   // just shows its product image as usual.
@@ -108,10 +110,11 @@ export function ProductCard({ product, style, className }: { product: Product; s
           ) : (
             <button
               type="button"
-              onClick={() => addToCart(product, 1, selectedColor ? { colorId: selectedColor.id, colorName: selectedColor.name, image: selectedColor.image } : undefined)}
-              className="min-h-11 rounded-full border border-[#221d1b] bg-[#1d1a19] px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-[#fffaf7] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 min-[390px]:min-h-0 md:px-3.5 md:text-[0.63rem]"
+              onClick={() => void runAdd(() => addToCart(product, 1, selectedColor ? { colorId: selectedColor.id, colorName: selectedColor.name, image: selectedColor.image } : undefined))}
+              disabled={addStatus === "adding"}
+              className={`min-h-11 rounded-full border ${addStatus === "added" ? "border-[#4f7a5a] bg-[#4f7a5a]" : "border-[#221d1b] bg-[#1d1a19]"} px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-[#fffaf7] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 min-[390px]:min-h-0 md:px-3.5 md:text-[0.63rem]`}
             >
-              {t.common.addToCart}
+              {addStatus === "added" ? `✓ ${t.common.addedToCart}` : addStatus === "adding" ? t.common.addingToCart : t.common.addToCart}
             </button>
           )}
         </div>

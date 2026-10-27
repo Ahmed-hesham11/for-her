@@ -122,6 +122,32 @@ html[dir="rtl"] .brand-serif-italic {
   }
 }
 
+@keyframes badge-bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-badge-bump {
+  animation: badge-bump 0.4s var(--ease-premium);
+}
+
+.animate-toast-in {
+  animation: toast-in 0.35s var(--ease-premium) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-badge-bump,
+  .animate-toast-in {
+    animation: none;
+  }
+}
+
 .animate-fade-up {
   animation: fade-up var(--duration-slow) var(--ease-premium) both;
 }

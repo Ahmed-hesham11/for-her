@@ -3,12 +3,14 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCartActions } from "@/components/cart-provider";
 import { useLocale } from "@/components/locale-provider";
+import { useAddFeedback } from "@/components/use-add-feedback";
 import { WishlistButton } from "@/components/wishlist-button";
 import type { Product } from "@/lib/storefront-data";
 import { formatEgp } from "@/lib/currency";
+import { trackViewContent } from "@/lib/meta-pixel";
 
 export function ProductDetailClient({
   product,
@@ -54,6 +56,7 @@ export function ProductDetailClient({
   const activeMedia = media[activeIndex] ?? media[0];
   const { addToCart } = useCartActions();
   const { t } = useLocale();
+  const { status: addStatus, run: runAdd } = useAddFeedback();
   const router = useRouter();
   const isOnOffer = product.originalPrice !== null && product.originalPrice > product.price;
   const discountPercent = isOnOffer ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0;
@@ -61,6 +64,12 @@ export function ProductDetailClient({
   // — kept as a separate constant here to avoid pulling the admin module
   // (and its Supabase dependency) into the storefront client bundle.
   const isLowStock = product.stock > 0 && product.stock <= 5;
+
+  useEffect(() => {
+    trackViewContent({ id: product.id, name: product.name, price: product.price });
+    // Once per product viewed, not on every re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   const handleSelectColor = (colorId: string) => {
     setSelectedColorId(colorId);
@@ -85,14 +94,13 @@ export function ProductDetailClient({
       sizeGroupRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
       return false;
     }
-    await addToCart(product, quantity, {
+    return addToCart(product, quantity, {
       colorId: selectedColor?.id ?? null,
       colorName: selectedColor?.name ?? null,
       sizeId: selectedSize?.id ?? null,
       sizeName: selectedSize?.label ?? null,
       image: selectedColor?.image ?? null,
     });
-    return true;
   };
 
   const handleBuyNow = async () => {
@@ -251,10 +259,11 @@ export function ProductDetailClient({
               </div>
               <button
                 type="button"
-                onClick={() => void addSelectionToCart()}
-                className="min-h-12 min-w-0 flex-1 rounded-full bg-[#1d1a19] px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#332d2b] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 sm:px-6 sm:tracking-[0.16em]"
+                onClick={() => void runAdd(addSelectionToCart)}
+                disabled={addStatus === "adding"}
+                className={`min-h-12 min-w-0 flex-1 rounded-full ${addStatus === "added" ? "bg-[#4f7a5a]" : "bg-[#1d1a19] hover:bg-[#332d2b]"} px-4 py-3 text-[0.72rem] font-semibold uppercase tracking-[0.12em] text-white transition-all duration-300 hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 sm:px-6 sm:tracking-[0.16em]`}
               >
-                {t.common.addToCart}
+                {addStatus === "added" ? `✓ ${t.common.addedToCart}` : addStatus === "adding" ? t.common.addingToCart : t.common.addToCart}
               </button>
               <button
                 type="button"

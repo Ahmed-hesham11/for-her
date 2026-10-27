@@ -108,6 +108,7 @@ export default async function AdminOrderDetailPage({
               <p><span className="font-medium text-[#221d1b]">عدد الطلبات:</span> {order.order_count}{order.order_count > 1 ? " (عميل متكرر)" : " (طلب أول مرة)"}</p>
               <p><span className="font-medium text-[#221d1b]">المحافظة:</span> {order.governorate}</p>
               <p><span className="font-medium text-[#221d1b]">العنوان:</span> {order.address}</p>
+              {order.notes ? <p className="whitespace-pre-wrap rounded-2xl border border-[#ead7a8] bg-[#fff8e6] px-3 py-2"><span className="font-medium text-[#221d1b]">ملاحظات العميل:</span> {order.notes}</p> : null}
               <p><span className="font-medium text-[#221d1b]">المصدر:</span> {ORDER_SOURCE_LABELS_AR[order.source] ?? order.source}</p>
             </div>
           </DashboardSection>

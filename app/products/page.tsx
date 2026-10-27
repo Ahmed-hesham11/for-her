@@ -7,6 +7,7 @@ import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
 import { getCategories, getProducts } from "@/lib/storefront-data-server";
 import { ProductCard } from "@/components/product-card";
+import { MetaSearchTracker } from "@/components/meta-search-tracker";
 import { ProductFiltersBar, type SortValue } from "@/components/product-filters-bar";
 import { productMatchesNames, resolveCategoryProductNames, type Product } from "@/lib/storefront-data";
 
@@ -100,6 +101,7 @@ export default async function ProductsPage({
               </Suspense>
             </div>
 
+            <MetaSearchTracker term={searchTerm} />
             {sorted.length === 0 ? (
               <div className="mt-10 border border-[#e6d9d2] bg-[#fffdfb] px-6 py-16 text-center md:px-10">
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[#a06f5c]">{t.productsPage.noProductsEyebrow}</p>

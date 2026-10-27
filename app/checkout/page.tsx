@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 import { useCart } from "@/components/cart-provider";
@@ -9,17 +9,21 @@ import { AuthGate } from "@/components/auth-gate";
 import { useAuth } from "@/components/auth-provider";
 import { useLocale } from "@/components/locale-provider";
 import { formatEgp } from "@/lib/currency";
+import { trackInitiateCheckout, trackPurchase } from "@/lib/meta-pixel";
 
 type OrderQuote = { subtotal: number; discount: number; shipping_fee: number; total_amount: number };
 type OrderResult = OrderQuote & { order_id: string; order_number: string | null };
 type ApiResponse = { error?: string; quote?: OrderQuote; order?: OrderResult };
+
+const NOTES_MAX_LENGTH = 500;
 
 function money(value: number | undefined) {
   return value === undefined ? "--" : formatEgp(value);
 }
 
 export default function CheckoutPage() {
-  const { items, clearCart } = useCart();
+  const { items, clearCart, isLoading: isCartLoading } = useCart();
+  const checkoutTracked = useRef(false);
   const { user } = useAuth();
   const { t } = useLocale();
   const [coupon, setCoupon] = useState("");
@@ -36,6 +40,7 @@ export default function CheckoutPage() {
   const [phoneSecondary, setPhoneSecondary] = useState("");
   const [governorate, setGovernorate] = useState("");
   const [address, setAddress] = useState("");
+  const [notes, setNotes] = useState("");
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "card">("cod");
   const [requestId] = useState(() => typeof crypto !== "undefined" ? crypto.randomUUID() : "checkout-request");
@@ -73,6 +78,13 @@ export default function CheckoutPage() {
     return () => { active = false; };
   }, []);
 
+  // Once per checkout visit, as soon as the cart has loaded with items in it.
+  useEffect(() => {
+    if (checkoutTracked.current || isCartLoading || items.length === 0) return;
+    checkoutTracked.current = true;
+    trackInitiateCheckout(items.map((item) => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })));
+  }, [items, isCartLoading]);
+
   useEffect(() => {
     if (items.length === 0) { setQuote(null); return; }
     let active = true;
@@ -106,10 +118,12 @@ export default function CheckoutPage() {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: items.map((item) => ({ product_id: item.id, quantity: item.quantity, color_id: item.colorId, size_id: item.sizeId })), coupon_code: appliedCoupon, customer_name: fullName, phone_1: phone, phone_2: phoneSecondary, governorate, address, payment_method: paymentMethod, request_id: requestId }),
+        body: JSON.stringify({ items: items.map((item) => ({ product_id: item.id, quantity: item.quantity, color_id: item.colorId, size_id: item.sizeId })), coupon_code: appliedCoupon, customer_name: fullName, phone_1: phone, phone_2: phoneSecondary, governorate, address, notes, payment_method: paymentMethod, request_id: requestId }),
       });
       const result = await response.json() as ApiResponse;
       if (!response.ok || !result.order) throw new Error(result.error ?? t.checkout.orderFailure);
+      // Server-confirmed order: value is the server's total, not client math.
+      trackPurchase(result.order.order_id, result.order.total_amount, items.map((item) => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })));
       setOrderResult(result.order); setQuote(result.order); setIsPlaced(true); clearCart();
     } catch (orderFailure) { setError(orderFailure instanceof Error ? orderFailure.message : t.checkout.orderFailure); }
     finally { setIsSubmitting(false); }
@@ -138,7 +152,7 @@ export default function CheckoutPage() {
               <label className="space-y-2 text-sm text-[#4a4240]"><span>{t.checkout.phone1}</span><input type="text" value={phone} onChange={(event) => setPhone(event.target.value)} className="w-full rounded-full border border-[#e5d7d1] bg-white px-4 py-3 outline-none" required /></label>
               <label className="space-y-2 text-sm text-[#4a4240]"><span>{t.checkout.phone2}</span><input type="text" value={phoneSecondary} onChange={(event) => setPhoneSecondary(event.target.value)} className="w-full rounded-full border border-[#e5d7d1] bg-white px-4 py-3 outline-none" /></label>
               <label className="space-y-2 text-sm text-[#4a4240]"><span>{t.checkout.governorate}</span><select value={governorate} onChange={(event) => setGovernorate(event.target.value)} className="w-full rounded-full border border-[#e5d7d1] bg-white px-4 py-3 outline-none" required><option value="" disabled>{t.checkout.selectGovernorate}</option>{governorates.map((name) => <option key={name} value={name}>{name}</option>)}</select></label>
-            </div><label className="mt-4 block space-y-2 text-sm text-[#4a4240]"><span>{t.checkout.address}</span><textarea rows={3} value={address} onChange={(event) => setAddress(event.target.value)} className="w-full rounded-[18px] border border-[#e5d7d1] bg-white px-4 py-3 outline-none" required /></label></section>
+            </div><label className="mt-4 block space-y-2 text-sm text-[#4a4240]"><span>{t.checkout.address}</span><textarea rows={3} value={address} onChange={(event) => setAddress(event.target.value)} className="w-full rounded-[18px] border border-[#e5d7d1] bg-white px-4 py-3 outline-none" required /></label><label className="mt-4 block space-y-2 text-sm text-[#4a4240]"><span>{t.checkout.notes}</span><textarea rows={3} maxLength={NOTES_MAX_LENGTH} value={notes} onChange={(event) => setNotes(event.target.value)} placeholder={t.checkout.notesPlaceholder} className="w-full rounded-[18px] border border-[#e5d7d1] bg-white px-4 py-3 outline-none" /><span className="block text-end text-xs text-[#786d6a]">{notes.length}/{NOTES_MAX_LENGTH}</span></label></section>
             <section><h2 className="mb-4 text-[0.75rem] font-medium uppercase tracking-[0.18em] text-[#766a67]">{t.checkout.paymentMethod}</h2><div className="space-y-3"><label className="flex items-center gap-3 rounded-full border border-[#e8d8d1] bg-white px-4 py-3 text-[#2e2725]"><input type="radio" name="payment" checked={paymentMethod === "cod"} onChange={() => setPaymentMethod("cod")} className="accent-[#1d1a19]" />{t.checkout.cashOnDelivery}</label></div></section>
             {error || quoteError ? <p className="rounded-2xl border border-[#f1c9c0] bg-[#fff5f3] px-3 py-2 text-sm text-[#7a3a32]">{error || quoteError}</p> : null}
             <section><h2 className="mb-4 text-[0.75rem] font-medium uppercase tracking-[0.18em] text-[#766a67]">{t.checkout.couponCode}</h2><div className="flex flex-col gap-3 sm:flex-row"><input type="text" value={coupon} onChange={(event) => setCoupon(event.target.value)} placeholder={t.checkout.couponPlaceholder} className="min-w-0 flex-1 rounded-full border border-[#e5d7d1] bg-white px-4 py-3 outline-none" /><button type="button" onClick={() => setAppliedCoupon(coupon)} disabled={isLoadingQuote} className="min-h-12 rounded-full bg-[#1d1a19] px-5 py-3 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-white hover:bg-[#332d2b] disabled:opacity-60">{t.checkout.apply}</button></div><p className="mt-2 text-xs text-[#786d6a]">{t.checkout.couponHint}</p></section>

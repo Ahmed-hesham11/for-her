@@ -80,7 +80,7 @@ export async function POST(request: Request) {
       p_governorate: body.governorate?.trim() || null,
       p_address: body.address?.trim() || null,
       p_payment_method: body.payment_method ?? "cod",
-      p_notes: body.notes?.trim() || null,
+      p_notes: body.notes?.trim().slice(0, 500) || null,
       p_request_id: body.request_id?.trim() || null,
     });
     if (error) {

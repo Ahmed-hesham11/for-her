@@ -5,6 +5,10 @@ export const LOCALE_COOKIE = "forher_locale";
 const en = {
   common: {
     addToCart: "Add to cart",
+    addingToCart: "Adding...",
+    addedToCart: "Added",
+    viewCart: "View cart",
+    closeAria: "Close",
     outOfStock: "Out of stock",
     remove: "Remove",
     continueShopping: "Continue shopping",
@@ -168,6 +172,8 @@ const en = {
     governorate: "Governorate",
     selectGovernorate: "Select your governorate",
     address: "Address",
+    notes: "Order notes (optional)",
+    notesPlaceholder: "Anything we should know? e.g. delivery time, gift wrapping...",
     paymentMethod: "Payment Method",
     cashOnDelivery: "Cash on Delivery",
     couponCode: "Coupon Code",
@@ -335,6 +341,10 @@ const en = {
 const ar: typeof en = {
   common: {
     addToCart: "أضيفي إلى السلة",
+    addingToCart: "جارٍ الإضافة...",
+    addedToCart: "تمت الإضافة",
+    viewCart: "عرض السلة",
+    closeAria: "إغلاق",
     outOfStock: "غير متوفر",
     remove: "إزالة",
     continueShopping: "متابعة التسوق",
@@ -498,6 +508,8 @@ const ar: typeof en = {
     governorate: "المحافظة",
     selectGovernorate: "اختاري محافظتك",
     address: "العنوان",
+    notes: "ملاحظات على الطلب (اختياري)",
+    notesPlaceholder: "أي ملاحظات؟ مثل ميعاد التوصيل أو تغليف هدية...",
     paymentMethod: "طريقة الدفع",
     cashOnDelivery: "الدفع عند الاستلام",
     couponCode: "كود الخصم",
