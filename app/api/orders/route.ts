@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { sendPurchaseToMeta } from "@/lib/meta-capi";
 
 type OrderItemInput = { product_id: string; quantity: number; color_id?: string | null; size_id?: string | null };
 type OrderRequest = {
@@ -87,6 +88,37 @@ export async function POST(request: Request) {
       console.error("[api/orders] create_secure_order failed:", error.code, error.message, error.details, error.hint);
       return NextResponse.json({ error: publicError(error.message) }, { status: 400 });
     }
+
+    // Server-side Purchase for Meta. Never lets a tracking problem fail an order.
+    try {
+      const order = data as { order_id?: string; total_amount?: number } | null;
+      if (order?.order_id && typeof order.total_amount === "number") {
+        const productIds = (body.items ?? []).map((item) => item.product_id);
+        const { data: products } = await supabaseAdmin.from("products").select("id, sku, selling_price").in("id", productIds);
+        const byId = new Map((products ?? []).map((product) => [product.id as string, product]));
+        const cookies = request.headers.get("cookie") ?? "";
+        const cookie = (name: string) => cookies.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`))?.[1] ?? null;
+        await sendPurchaseToMeta({
+          orderId: order.order_id,
+          value: order.total_amount,
+          items: (body.items ?? []).map((item) => {
+            const product = byId.get(item.product_id);
+            return { sku: String(product?.sku ?? item.product_id), quantity: item.quantity, price: Number(product?.selling_price ?? 0) };
+          }),
+          sourceUrl: request.headers.get("referer") ?? new URL("/checkout", request.url).toString(),
+          email: user.email,
+          phone: body.phone_1 ?? null,
+          name: body.customer_name ?? user.full_name ?? null,
+          clientIp: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+          userAgent: request.headers.get("user-agent"),
+          fbp: cookie("_fbp"),
+          fbc: cookie("_fbc"),
+        });
+      }
+    } catch (trackingError) {
+      console.error("[api/orders] Meta CAPI step failed:", trackingError);
+    }
+
     return NextResponse.json({ order: data });
   } catch (error) {
     if (error instanceof SyntaxError) return NextResponse.json({ error: "Invalid order request." }, { status: 400 });
