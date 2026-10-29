@@ -6,7 +6,8 @@ import { META_PIXEL_ID } from "@/lib/meta-pixel";
 // id is the event_id, matching the browser pixel's eventID so Meta dedupes
 // the two. A silent no-op when META_CAPI_ACCESS_TOKEN isn't set.
 
-const GRAPH_VERSION = "v21.0";
+// Overridable without a code change if Meta retires this version.
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION ?? "v24.0";
 
 export type CapiPurchase = {
   orderId: string;
