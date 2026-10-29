@@ -20,6 +20,7 @@ const PENDING_PREFIX = "pending:";
 export type CartItem = {
   lineId: string;
   id: string;
+  sku: string;
   name: string;
   price: number;
   image: string;
@@ -160,6 +161,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         {
           lineId: `${PENDING_PREFIX}${product.id}:${colorId ?? ""}:${sizeId ?? ""}`,
           id: product.id,
+          sku: product.sku,
           name: product.name,
           price: product.price,
           image: options.image || product.image,
@@ -187,7 +189,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
       setItems((body.items ?? []) as CartItem[]);
-      trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity });
+      trackAddToCart({ sku: product.sku, name: product.name, price: product.price, quantity });
       return true;
     } catch {
       setError(t.cart.addError);

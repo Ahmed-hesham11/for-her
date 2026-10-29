@@ -82,7 +82,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (checkoutTracked.current || isCartLoading || items.length === 0) return;
     checkoutTracked.current = true;
-    trackInitiateCheckout(items.map((item) => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })));
+    trackInitiateCheckout(items.map((item) => ({ sku: item.sku, name: item.name, price: item.price, quantity: item.quantity })));
   }, [items, isCartLoading]);
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function CheckoutPage() {
       const result = await response.json() as ApiResponse;
       if (!response.ok || !result.order) throw new Error(result.error ?? t.checkout.orderFailure);
       // Server-confirmed order: value is the server's total, not client math.
-      trackPurchase(result.order.order_id, result.order.total_amount, items.map((item) => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })));
+      trackPurchase(result.order.order_id, result.order.total_amount, items.map((item) => ({ sku: item.sku, name: item.name, price: item.price, quantity: item.quantity })));
       setOrderResult(result.order); setQuote(result.order); setIsPlaced(true); clearCart();
     } catch (orderFailure) { setError(orderFailure instanceof Error ? orderFailure.message : t.checkout.orderFailure); }
     finally { setIsSubmitting(false); }

@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-export type PixelItem = { id: string; name: string; price: number; quantity: number };
+export type PixelItem = { sku: string; name: string; price: number; quantity: number };
 
 function fbq(command: string, ...args: unknown[]) {
   if (typeof window === "undefined" || typeof window.fbq !== "function") return;
@@ -31,8 +31,8 @@ export function trackPageView() {
 function ecommerceParams(items: PixelItem[]) {
   return {
     content_type: "product",
-    content_ids: items.map((item) => item.id),
-    contents: items.map((item) => ({ id: item.id, quantity: item.quantity, item_price: item.price })),
+    content_ids: items.map((item) => item.sku),
+    contents: items.map((item) => ({ id: item.sku, quantity: item.quantity, item_price: item.price })),
     num_items: items.reduce((sum, item) => sum + item.quantity, 0),
     currency: CURRENCY,
   };
@@ -41,9 +41,9 @@ function ecommerceParams(items: PixelItem[]) {
 export function trackViewContent(item: Omit<PixelItem, "quantity">) {
   fbq("track", "ViewContent", {
     content_type: "product",
-    content_ids: [item.id],
+    content_ids: [item.sku],
     content_name: item.name,
-    contents: [{ id: item.id, quantity: 1, item_price: item.price }],
+    contents: [{ id: item.sku, quantity: 1, item_price: item.price }],
     value: item.price,
     currency: CURRENCY,
   });
