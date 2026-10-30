@@ -54,7 +54,8 @@ export default async function ProductDetailPage({
               "@type": "Offer",
               priceCurrency: "EGP",
               price: product.price,
-              availability: product.stock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+              // The store takes orders regardless of stock, so products always read as available.
+              availability: "https://schema.org/InStock",
               url: absoluteUrl(`/product/${product.id}`),
             },
           }).replace(/</g, "\\u003c"),
