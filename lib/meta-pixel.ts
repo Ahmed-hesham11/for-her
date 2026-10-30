@@ -19,6 +19,15 @@ declare global {
 
 export type PixelItem = { sku: string; name: string; price: number; quantity: number };
 
+// Meta Catalog item IDs are product SKUs, never the internal UUID. An item
+// without a SKU (or with a bad price) is dropped rather than sent under the
+// wrong ID, which would break catalog matching.
+function validItems<T extends { sku: string; price: number }>(items: T[], event: string): T[] {
+  const valid = items.filter((item) => item.sku?.trim() && Number.isFinite(item.price) && item.price >= 0);
+  if (valid.length !== items.length) console.warn(`[meta-pixel] ${event}: skipped ${items.length - valid.length} item(s) with missing SKU or invalid price`);
+  return valid;
+}
+
 function fbq(command: string, ...args: unknown[]) {
   if (typeof window === "undefined" || typeof window.fbq !== "function") return;
   window.fbq(command, ...args);
@@ -39,6 +48,7 @@ function ecommerceParams(items: PixelItem[]) {
 }
 
 export function trackViewContent(item: Omit<PixelItem, "quantity">) {
+  if (validItems([item], "ViewContent").length === 0) return;
   fbq("track", "ViewContent", {
     content_type: "product",
     content_ids: [item.sku],
@@ -54,6 +64,7 @@ export function trackSearch(searchString: string) {
 }
 
 export function trackAddToCart(item: PixelItem) {
+  if (validItems([item], "AddToCart").length === 0) return;
   fbq("track", "AddToCart", {
     ...ecommerceParams([item]),
     content_name: item.name,
@@ -61,7 +72,9 @@ export function trackAddToCart(item: PixelItem) {
   });
 }
 
-export function trackInitiateCheckout(items: PixelItem[]) {
+export function trackInitiateCheckout(allItems: PixelItem[]) {
+  const items = validItems(allItems, "InitiateCheckout");
+  if (items.length === 0) return;
   fbq("track", "InitiateCheckout", {
     ...ecommerceParams(items),
     value: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
@@ -72,7 +85,9 @@ export function trackInitiateCheckout(items: PixelItem[]) {
 // the order id doubles as Meta's eventID (so it would also dedupe against a
 // future server-side Conversions API event) and is remembered in localStorage.
 // `value` must be the server-confirmed order total.
-export function trackPurchase(orderId: string, value: number, items: PixelItem[]) {
+export function trackPurchase(orderId: string, value: number, allItems: PixelItem[]) {
+  const items = validItems(allItems, "Purchase");
+  if (items.length === 0 || !Number.isFinite(value) || value < 0) return;
   const storageKey = `meta_purchase_${orderId}`;
   try {
     if (window.localStorage.getItem(storageKey)) return;

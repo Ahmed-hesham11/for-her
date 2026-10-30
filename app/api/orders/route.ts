@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { supabaseAdmin } from "@/lib/supabase/admin";
-import { sendPurchaseToMeta } from "@/lib/meta-capi";
+import { buildContext } from "@/lib/meta-capi";
+import { afterOrderCreated } from "@/lib/meta-outbox";
+import { runMetaOutbox, supabaseOutboxStore } from "@/lib/meta-outbox-store";
 
 type OrderItemInput = { product_id: string; quantity: number; color_id?: string | null; size_id?: string | null };
 type OrderRequest = {
@@ -89,34 +91,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: publicError(error.message) }, { status: 400 });
     }
 
-    // Server-side Purchase for Meta. Never lets a tracking problem fail an order.
+    // Meta Purchase: the outbox row was already created by a DB trigger in the
+    // order's own transaction. Here we only attach request context and kick off
+    // delivery in the background; the response never waits on Meta, and the
+    // cron worker retries anything this fast path doesn't finish.
     try {
-      const order = data as { order_id?: string; total_amount?: number } | null;
-      if (order?.order_id && typeof order.total_amount === "number") {
-        const productIds = (body.items ?? []).map((item) => item.product_id);
-        const { data: products } = await supabaseAdmin.from("products").select("id, sku, selling_price").in("id", productIds);
-        const byId = new Map((products ?? []).map((product) => [product.id as string, product]));
-        const cookies = request.headers.get("cookie") ?? "";
-        const cookie = (name: string) => cookies.match(new RegExp(`(?:^|;\\s*)${name}=([^;]+)`))?.[1] ?? null;
-        await sendPurchaseToMeta({
+      const order = data as { order_id?: string } | null;
+      if (order?.order_id) {
+        await afterOrderCreated({
           orderId: order.order_id,
-          value: order.total_amount,
-          items: (body.items ?? []).map((item) => {
-            const product = byId.get(item.product_id);
-            return { sku: String(product?.sku ?? item.product_id), quantity: item.quantity, price: Number(product?.selling_price ?? 0) };
+          context: buildContext({
+            email: user.email,
+            userId: user.id,
+            clientIp: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+            userAgent: request.headers.get("user-agent"),
+            cookieHeader: request.headers.get("cookie"),
+            sourceUrl: request.headers.get("referer") ?? new URL("/checkout", request.url).toString(),
           }),
-          sourceUrl: request.headers.get("referer") ?? new URL("/checkout", request.url).toString(),
-          email: user.email,
-          phone: body.phone_1 ?? null,
-          name: body.customer_name ?? user.full_name ?? null,
-          clientIp: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
-          userAgent: request.headers.get("user-agent"),
-          fbp: cookie("_fbp"),
-          fbc: cookie("_fbc"),
+          saveContext: supabaseOutboxStore.saveContext,
+          deliver: (orderId) => runMetaOutbox({ orderId, limit: 1 }),
+          schedule: (task) => after(task),
         });
       }
     } catch (trackingError) {
-      console.error("[api/orders] Meta CAPI step failed:", trackingError);
+      console.error("[api/orders] Meta tracking step failed:", trackingError instanceof Error ? trackingError.message : "unknown");
     }
 
     return NextResponse.json({ order: data });
