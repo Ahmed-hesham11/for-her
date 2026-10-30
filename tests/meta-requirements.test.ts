@@ -116,17 +116,20 @@ describe("[R2] PageView fires once on load and on navigation", () => {
       React.createElement(SearchParamsContext.Provider, { value: new URLSearchParams(search) as never }, React.createElement(MetaPixelTracker)));
     const pageViews = () => calls.filter((c) => c[0] === "track" && c[1] === "PageView").length;
 
+    const settle = () => new Promise((r) => setTimeout(r, 400));
     let renderer!: TestRenderer.ReactTestRenderer;
-    await act(async () => { renderer = TestRenderer.create(tree("/")); });
+    await act(async () => { renderer = TestRenderer.create(tree("/")); }); await settle();
     assert.equal(pageViews(), 1, "initial load");
-    await act(async () => { renderer.update(tree("/")); });
+    await act(async () => { renderer.update(tree("/")); }); await settle();
     assert.equal(pageViews(), 1, "re-render of the same route");
-    await act(async () => { renderer.update(tree("/products")); });
+    await act(async () => { renderer.update(tree("/products")); }); await settle();
     assert.equal(pageViews(), 2, "client-side navigation");
-    await act(async () => { renderer.update(tree("/product/abc")); });
+    await act(async () => { renderer.update(tree("/product/abc")); }); await settle();
     assert.equal(pageViews(), 3);
-    await act(async () => { renderer.update(tree("/admin/orders")); });
-    assert.equal(pageViews(), 3, "admin excluded");
+    await act(async () => { renderer.update(tree("/redirect")); renderer.update(tree("/product/final")); }); await settle();
+    assert.equal(pageViews(), 4, "a redirect reports only the final route");
+    await act(async () => { renderer.update(tree("/admin/orders")); }); await settle();
+    assert.equal(pageViews(), 4, "admin excluded");
     await act(async () => { renderer.unmount(); });
   });
 });
@@ -201,7 +204,7 @@ describe("[R7] browser and server Purchase share one event_id", () => {
   test("[R7] same event_name and event_id (the order id)", async () => {
     const orderId = backend.createOrder({ total: 500, items: twoItems });
     const calls = fakeWindow();
-    trackPurchase(orderId, 500, [{ sku: "DRESS-001", name: "d", price: 200, quantity: 2 }]);
+    trackPurchase(orderId, 500);
     await store.runMetaOutbox({ orderId });
     const server = backend.metaRequests[0].body.data[0];
     assert.equal(calls[0][1], "Purchase"); assert.equal(server.event_name, "Purchase");
@@ -255,7 +258,7 @@ describe("[R9] missing SKUs never fall back to UUIDs", () => {
   test("[R9] browser events with an empty SKU are dropped", () => {
     const calls = fakeWindow();
     trackViewContent({ sku: "", name: "x", price: 5 }); trackAddToCart({ sku: " ", name: "x", price: 5, quantity: 1 });
-    trackInitiateCheckout([{ sku: "", name: "x", price: 5, quantity: 1 }]); trackPurchase("o", 5, [{ sku: "", name: "x", price: 5, quantity: 1 }]);
+    trackInitiateCheckout([{ sku: "", name: "x", price: 5, quantity: 1 }]);
     assert.equal(calls.length, 0);
   });
 });
@@ -265,7 +268,7 @@ describe("[R10] invalid prices and totals are rejected", () => {
     const calls = fakeWindow(); const restore = quiet();
     trackViewContent({ sku: "A", name: "x", price: NaN }); trackAddToCart({ sku: "A", name: "x", price: -1, quantity: 1 });
     trackInitiateCheckout([{ sku: "A", name: "x", price: Infinity, quantity: 1 }]);
-    trackPurchase("o1", NaN, [{ sku: "A", name: "x", price: 5, quantity: 1 }]); trackPurchase("o2", -5, [{ sku: "A", name: "x", price: 5, quantity: 1 }]);
+    trackPurchase("o1", NaN); trackPurchase("o2", -5);
     restore(); assert.equal(calls.length, 0);
   });
   test("[R10] server: a negative or non-numeric order total is failed permanently, never sent", async () => {

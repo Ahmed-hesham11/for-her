@@ -33,8 +33,26 @@ function fbq(command: string, ...args: unknown[]) {
   window.fbq(command, ...args);
 }
 
+// Sends a browser event through the pixel AND mirrors it to the server
+// (/api/meta/event -> Conversions API). Both carry the same event id, so Meta
+// counts it once while the server copy covers ad-blocked / lost pixel hits.
+function track(eventName: string, params?: Record<string, unknown>) {
+  if (typeof window === "undefined") return;
+  const eventId = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  fbq("track", eventName, params, { eventID: eventId });
+  if (typeof window.fetch !== "function") return;
+  window
+    .fetch("/api/meta/event", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      keepalive: true,
+      body: JSON.stringify({ event_name: eventName, event_id: eventId, event_time: Math.floor(Date.now() / 1000), source_url: window.location.href, custom_data: params ?? {} }),
+    })
+    .catch(() => {});
+}
+
 export function trackPageView() {
-  fbq("track", "PageView");
+  track("PageView");
 }
 
 function ecommerceParams(items: PixelItem[]) {
@@ -49,7 +67,7 @@ function ecommerceParams(items: PixelItem[]) {
 
 export function trackViewContent(item: Omit<PixelItem, "quantity">) {
   if (validItems([item], "ViewContent").length === 0) return;
-  fbq("track", "ViewContent", {
+  track("ViewContent", {
     content_type: "product",
     content_ids: [item.sku],
     content_name: item.name,
@@ -60,12 +78,12 @@ export function trackViewContent(item: Omit<PixelItem, "quantity">) {
 }
 
 export function trackSearch(searchString: string) {
-  fbq("track", "Search", { search_string: searchString });
+  track("Search", { search_string: searchString });
 }
 
 export function trackAddToCart(item: PixelItem) {
   if (validItems([item], "AddToCart").length === 0) return;
-  fbq("track", "AddToCart", {
+  track("AddToCart", {
     ...ecommerceParams([item]),
     content_name: item.name,
     value: item.price * item.quantity,
@@ -75,7 +93,7 @@ export function trackAddToCart(item: PixelItem) {
 export function trackInitiateCheckout(allItems: PixelItem[]) {
   const items = validItems(allItems, "InitiateCheckout");
   if (items.length === 0) return;
-  fbq("track", "InitiateCheckout", {
+  track("InitiateCheckout", {
     ...ecommerceParams(items),
     value: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
   });
@@ -85,9 +103,8 @@ export function trackInitiateCheckout(allItems: PixelItem[]) {
 // the order id doubles as Meta's eventID (so it would also dedupe against a
 // future server-side Conversions API event) and is remembered in localStorage.
 // `value` must be the server-confirmed order total.
-export function trackPurchase(orderId: string, value: number, allItems: PixelItem[]) {
-  const items = validItems(allItems, "Purchase");
-  if (items.length === 0 || !Number.isFinite(value) || value < 0) return;
+export function trackPurchase(orderId: string, value: number) {
+  if (!Number.isFinite(value) || value < 0) return;
   const storageKey = `meta_purchase_${orderId}`;
   try {
     if (window.localStorage.getItem(storageKey)) return;
@@ -96,5 +113,5 @@ export function trackPurchase(orderId: string, value: number, allItems: PixelIte
     // Storage unavailable (private mode): fall through; the call site only
     // fires once per successful order anyway.
   }
-  fbq("track", "Purchase", { ...ecommerceParams(items), value, currency: CURRENCY }, { eventID: orderId });
+  fbq("track", "Purchase", { value, currency: CURRENCY }, { eventID: orderId });
 }

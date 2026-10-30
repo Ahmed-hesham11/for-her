@@ -14,7 +14,10 @@ function PageViewTracker() {
 
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
-    trackPageView();
+    // Short delay so a redirect (e.g. /categories/x/y -> /products?...) only
+    // reports the final route instead of two PageViews back to back.
+    const timer = setTimeout(trackPageView, 300);
+    return () => clearTimeout(timer);
   }, [pathname, search]);
 
   return null;

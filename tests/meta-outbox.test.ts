@@ -185,7 +185,7 @@ describe("payload", () => {
   test("browser and server Purchase share the same event_name and event_id", () => {
     const fb: unknown[][] = [];
     (globalThis as Record<string, unknown>).window = { fbq: (...a: unknown[]) => fb.push(a), localStorage: { getItem: () => null, setItem: () => {} } };
-    trackPurchase(ORDER_ID, 540, [{ sku: "DRESS-001", name: "d", price: 200, quantity: 2 }]);
+    trackPurchase(ORDER_ID, 540);
     const server = buildPurchaseEvent(makeRow(), makeOrder(), null, T0 + 1);
     assert.equal(fb[0][1], "Purchase"); assert.equal(server.event_name, "Purchase");
     assert.equal((fb[0][3] as { eventID: string }).eventID, server.event_id);

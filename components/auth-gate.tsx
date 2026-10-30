@@ -12,7 +12,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.replace("/login");
+      router.replace(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
     }
   }, [isLoading, isAuthenticated, router]);
 

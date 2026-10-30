@@ -136,7 +136,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // straight to checkout) don't sit through a round trip first.
   const addToCart = useCallback(async (product: Product, quantity = 1, options: CartOptions = {}) => {
     if (!user) {
-      router.push("/login");
+      router.push(`/login?redirect=${encodeURIComponent(window.location.pathname)}`);
       return false;
     }
 

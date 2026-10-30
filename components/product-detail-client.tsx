@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useCartActions } from "@/components/cart-provider";
+import { useCartActions, useCartState } from "@/components/cart-provider";
 import { useLocale } from "@/components/locale-provider";
 import { useAddFeedback } from "@/components/use-add-feedback";
 import { WishlistButton } from "@/components/wishlist-button";
@@ -55,6 +55,7 @@ export function ProductDetailClient({
   const [activeIndex, setActiveIndex] = useState(0);
   const activeMedia = media[activeIndex] ?? media[0];
   const { addToCart } = useCartActions();
+  const { error: cartError } = useCartState();
   const { t } = useLocale();
   const { status: addStatus, run: runAdd } = useAddFeedback();
   const router = useRouter();
@@ -273,6 +274,7 @@ export function ProductDetailClient({
                 {t.productDetail.buyNow}
               </button>
             </div>
+            {cartError ? <p role="alert" className="mt-3 text-sm text-[#9c3d2f]">{cartError}</p> : null}
           </div>
         </div>
 
