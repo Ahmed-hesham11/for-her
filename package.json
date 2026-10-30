@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --tsconfig tests/tsconfig.json --test tests/*.test.ts",
+    "test:report": "tsx --tsconfig tests/tsconfig.json --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=./tests/report-reporter.mjs --test-reporter-destination=test-report.md tests/*.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
@@ -24,8 +25,10 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-test-renderer": "^19.3.0",
     "eslint": "^9",
     "eslint-config-next": "15.5.27",
+    "react-test-renderer": "^19.2.8",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

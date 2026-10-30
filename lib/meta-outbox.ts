@@ -56,7 +56,8 @@ export function buildPurchaseEvent(row: OutboxRow, order: OrderSnapshot, fallbac
   // is deliberately no fallback to the product UUID.
   const withSku = items.flatMap((item) => {
     const sku = item.sku?.trim();
-    return sku ? [{ sku, quantity: item.quantity, price: Number(item.unit_price) }] : [];
+    const price = Number(item.unit_price);
+    return sku && Number.isFinite(price) && price >= 0 ? [{ sku, quantity: item.quantity, price }] : [];
   });
   const sourceUrl = row.context?.source_url ?? fallbackSourceUrl;
 
