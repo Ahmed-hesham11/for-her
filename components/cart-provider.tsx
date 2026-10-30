@@ -189,7 +189,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         return false;
       }
       setItems((body.items ?? []) as CartItem[]);
-      trackAddToCart({ sku: product.sku, name: product.name, price: product.price, quantity });
+      trackAddToCart({ id: product.id, name: product.name, price: product.price, quantity });
       return true;
     } catch {
       setError(t.cart.addError);

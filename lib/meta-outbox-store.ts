@@ -43,10 +43,10 @@ export const supabaseOutboxStore: OutboxStore = {
       .maybeSingle();
     if (error) throw new Error(`ORDER_READ_${error.code ?? "FAILED"}`);
     if (!order) return null;
-    // Saved order lines are the source of truth (SKU and unit_price snapshot at order time).
+    // Saved order lines are the source of truth (product id and unit_price snapshot at order time).
     const { data: items, error: itemsError } = await db()
       .from("order_items")
-      .select("sku, quantity, unit_price")
+      .select("product_id, quantity, unit_price")
       .eq("order_id", orderId);
     if (itemsError) throw new Error(`ORDER_ITEMS_READ_${itemsError.code ?? "FAILED"}`);
     return {
@@ -57,7 +57,7 @@ export const supabaseOutboxStore: OutboxStore = {
       phone_1: (order.phone_1 as string | null) ?? null,
       governorate: (order.governorate as string | null) ?? null,
       items: (items ?? []).map((item) => ({
-        sku: (item.sku as string | null) ?? null,
+        product_id: (item.product_id as string | null) ?? null,
         quantity: Number(item.quantity),
         unit_price: Number(item.unit_price),
       })),

@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 
 const PRODUCT_UUID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-const twoItems = [{ sku: "DRESS-001", quantity: 2, unit_price: 200 }, { sku: "BAG-7", quantity: 1, unit_price: 100 }];
+const twoItems = [{ product_id: "DRESS-001", quantity: 2, unit_price: 200 }, { product_id: "BAG-7", quantity: 1, unit_price: 100 }];
 
 // ---- browser harness ------------------------------------------------------
 type FbqCall = unknown[];
@@ -135,23 +135,23 @@ describe("[R2] PageView fires once on load and on navigation", () => {
 });
 
 describe("[R3] ViewContent", () => {
-  test("[R3] sends the SKU (not the product UUID) with name, value and EGP", () => {
+  test("[R3] sends the product id with name, value and EGP", () => {
     const calls = fakeWindow();
-    trackViewContent({ sku: "DRESS-001", name: "Summer Dress", price: 250 });
+    trackViewContent({ id: "DRESS-001", name: "Summer Dress", price: 250 });
     assert.equal(calls.length, 1); assert.equal(calls[0][1], "ViewContent");
     assert.deepEqual(calls[0][2], { content_type: "product", content_ids: ["DRESS-001"], content_name: "Summer Dress", contents: [{ id: "DRESS-001", quantity: 1, item_price: 250 }], value: 250, currency: "EGP" });
   });
-  test("[R3] the product page passes product.sku, and ViewContent runs once per product id", () => {
+  test("[R3] the product page passes product.id, and ViewContent runs once per product id", () => {
     const src = read("components/product-detail-client.tsx");
-    assert.match(src, /trackViewContent\(\{ sku: product\.sku,/);
+    assert.match(src, /trackViewContent\(\{ id: product\.id,/);
     assert.match(src, /\[product\.id\]/);
   });
 });
 
 describe("[R4] AddToCart", () => {
-  test("[R4] sends SKU, quantity and value = price × quantity", () => {
+  test("[R4] sends product id, quantity and value = price × quantity", () => {
     const calls = fakeWindow();
-    trackAddToCart({ sku: "DRESS-001", name: "Dress", price: 200, quantity: 3 });
+    trackAddToCart({ id: "DRESS-001", name: "Dress", price: 200, quantity: 3 });
     const p = calls[0][2] as Record<string, unknown>;
     assert.equal(calls[0][1], "AddToCart"); assert.deepEqual(p.content_ids, ["DRESS-001"]); assert.equal(p.value, 600); assert.equal(p.num_items, 3); assert.equal(p.currency, "EGP");
     assert.deepEqual(p.contents, [{ id: "DRESS-001", quantity: 3, item_price: 200 }]);
@@ -168,9 +168,9 @@ describe("[R4] AddToCart", () => {
 });
 
 describe("[R5] InitiateCheckout", () => {
-  test("[R5] sends every cart SKU, total quantity and the summed value", () => {
+  test("[R5] sends every cart product id, total quantity and the summed value", () => {
     const calls = fakeWindow();
-    trackInitiateCheckout([{ sku: "DRESS-001", name: "a", price: 200, quantity: 2 }, { sku: "BAG-7", name: "b", price: 100, quantity: 1 }]);
+    trackInitiateCheckout([{ id: "DRESS-001", name: "a", price: 200, quantity: 2 }, { id: "BAG-7", name: "b", price: 100, quantity: 1 }]);
     const p = calls[0][2] as Record<string, unknown>;
     assert.equal(calls[0][1], "InitiateCheckout"); assert.deepEqual(p.content_ids, ["DRESS-001", "BAG-7"]); assert.equal(p.num_items, 3); assert.equal(p.value, 500); assert.equal(p.currency, "EGP");
   });
@@ -229,7 +229,7 @@ describe("[R8] Purchase uses the saved order_items", () => {
   });
   test("[R8] later changes to the DB rows (not to any client data) change the payload", async () => {
     const orderId = backend.createOrder({ total: 540, items: twoItems });
-    backend.orderItems.find((i) => i.sku === "BAG-7")!.sku = "BAG-9";
+    backend.orderItems.find((i) => i.product_id === "BAG-7")!.product_id = "BAG-9";
     await store.runMetaOutbox({ orderId });
     assert.deepEqual((backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] }).content_ids, ["DRESS-001", "BAG-9"]);
   });
@@ -240,25 +240,23 @@ describe("[R8] Purchase uses the saved order_items", () => {
   });
 });
 
-describe("[R9] missing SKUs never fall back to UUIDs", () => {
-  test("[R9] items with null or blank SKU are excluded; the product UUID never appears in the payload", async () => {
-    const orderId = backend.createOrder({ total: 300, items: [{ sku: "OK-1", quantity: 1, unit_price: 100 }, { sku: null, quantity: 1, unit_price: 100 }, { sku: "  ", quantity: 1, unit_price: 100 }] });
-    backend.orderItems.forEach((i) => { i.product_id = PRODUCT_UUID; });
+describe("[R9] items without a product id are left out", () => {
+  test("[R9] items with null or blank product id are excluded from the payload", async () => {
+    const orderId = backend.createOrder({ total: 300, items: [{ product_id: PRODUCT_UUID, quantity: 1, unit_price: 100 }, { product_id: null, quantity: 1, unit_price: 100 }, { product_id: "  ", quantity: 1, unit_price: 100 }] });
     const restore = quiet(); await store.runMetaOutbox({ orderId }); restore();
     const body = backend.metaRequests[0].body;
-    assert.deepEqual((body.data[0].custom_data as { content_ids: string[] }).content_ids, ["OK-1"]);
-    assert.equal(JSON.stringify(body).includes(PRODUCT_UUID), false);
+    assert.deepEqual((body.data[0].custom_data as { content_ids: string[] }).content_ids, [PRODUCT_UUID]);
   });
-  test("[R9] an order with no SKUs still reports value but omits content_ids entirely", async () => {
-    const orderId = backend.createOrder({ total: 100, items: [{ sku: null, quantity: 1, unit_price: 100 }] });
+  test("[R9] an order with no product ids still reports value but omits content_ids entirely", async () => {
+    const orderId = backend.createOrder({ total: 100, items: [{ product_id: null, quantity: 1, unit_price: 100 }] });
     const restore = quiet(); await store.runMetaOutbox({ orderId }); restore();
     const cd = backend.metaRequests[0].body.data[0].custom_data as Record<string, unknown>;
     assert.equal("content_ids" in cd, false); assert.equal(cd.value, 100);
   });
-  test("[R9] browser events with an empty SKU are dropped", () => {
+  test("[R9] browser events with an empty id are dropped", () => {
     const calls = fakeWindow();
-    trackViewContent({ sku: "", name: "x", price: 5 }); trackAddToCart({ sku: " ", name: "x", price: 5, quantity: 1 });
-    trackInitiateCheckout([{ sku: "", name: "x", price: 5, quantity: 1 }]);
+    trackViewContent({ id: "", name: "x", price: 5 }); trackAddToCart({ id: " ", name: "x", price: 5, quantity: 1 });
+    trackInitiateCheckout([{ id: "", name: "x", price: 5, quantity: 1 }]);
     assert.equal(calls.length, 0);
   });
 });
@@ -266,8 +264,8 @@ describe("[R9] missing SKUs never fall back to UUIDs", () => {
 describe("[R10] invalid prices and totals are rejected", () => {
   test("[R10] browser: NaN / negative prices and totals send nothing", () => {
     const calls = fakeWindow(); const restore = quiet();
-    trackViewContent({ sku: "A", name: "x", price: NaN }); trackAddToCart({ sku: "A", name: "x", price: -1, quantity: 1 });
-    trackInitiateCheckout([{ sku: "A", name: "x", price: Infinity, quantity: 1 }]);
+    trackViewContent({ id: "A", name: "x", price: NaN }); trackAddToCart({ id: "A", name: "x", price: -1, quantity: 1 });
+    trackInitiateCheckout([{ id: "A", name: "x", price: Infinity, quantity: 1 }]);
     trackPurchase("o1", NaN); trackPurchase("o2", -5);
     restore(); assert.equal(calls.length, 0);
   });
@@ -282,7 +280,7 @@ describe("[R10] invalid prices and totals are rejected", () => {
     assert.deepEqual(backend.outbox.map((r) => r.last_error), ["INVALID_VALUE", "INVALID_VALUE"]); assert.ok(a && b);
   });
   test("[R10] server: an item with an invalid unit_price is excluded from content_ids", async () => {
-    const orderId = backend.createOrder({ total: 300, items: [{ sku: "GOOD", quantity: 1, unit_price: 100 }, { sku: "BAD", quantity: 1, unit_price: -4 }] });
+    const orderId = backend.createOrder({ total: 300, items: [{ product_id: "GOOD", quantity: 1, unit_price: 100 }, { product_id: "BAD", quantity: 1, unit_price: -4 }] });
     await store.runMetaOutbox({ orderId });
     assert.deepEqual((backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] }).content_ids, ["GOOD"]);
   });

@@ -82,7 +82,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     if (checkoutTracked.current || isCartLoading || items.length === 0) return;
     checkoutTracked.current = true;
-    trackInitiateCheckout(items.map((item) => ({ sku: item.sku, name: item.name, price: item.price, quantity: item.quantity })));
+    trackInitiateCheckout(items.map((item) => ({ id: item.id, name: item.name, price: item.price, quantity: item.quantity })));
   }, [items, isCartLoading]);
 
   useEffect(() => {

@@ -12,7 +12,7 @@ const ctx: OutboxContext = { em: sha256("a@b.com"), external_id: sha256("u1"), c
 
 function makeOrder(over: Partial<OrderSnapshot> = {}): OrderSnapshot {
   return { id: ORDER_ID, user_id: "u1", total_amount: 540, customer_name: "Sara Ali", phone_1: "01012345678", governorate: "Cairo",
-    items: [{ sku: "DRESS-001", quantity: 2, unit_price: 200 }, { sku: "BAG-7", quantity: 1, unit_price: 100 }], ...over };
+    items: [{ product_id: "DRESS-001", quantity: 2, unit_price: 200 }, { product_id: "BAG-7", quantity: 1, unit_price: 100 }], ...over };
 }
 
 function makeRow(over: Partial<OutboxRow> = {}): OutboxRow {
@@ -169,10 +169,10 @@ describe("payload", () => {
     assert.equal(times.length, 3); assert.deepEqual(new Set(times), new Set([Math.floor(T0 / 1000)]));
   });
 
-  test("missing SKU never falls back to the UUID", () => {
-    const mixed = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ sku: "A-1", quantity: 1, unit_price: 10 }, { sku: null, quantity: 1, unit_price: 5 }, { sku: "  ", quantity: 1, unit_price: 5 }] }), null, T0 + 1);
+  test("items without a product id are excluded", () => {
+    const mixed = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ product_id: "A-1", quantity: 1, unit_price: 10 }, { product_id: null, quantity: 1, unit_price: 5 }, { product_id: "  ", quantity: 1, unit_price: 5 }] }), null, T0 + 1);
     assert.deepEqual(mixed.custom_data.content_ids, ["A-1"]); assert.equal(mixed.custom_data.num_items, 3);
-    const none = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ sku: null, quantity: 1, unit_price: 5 }] }), null, T0 + 1);
+    const none = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ product_id: null, quantity: 1, unit_price: 5 }] }), null, T0 + 1);
     assert.equal("content_ids" in none.custom_data, false); assert.equal(none.custom_data.value, 540);
     assert.equal(JSON.stringify(none.custom_data).includes(ORDER_ID), false);
   });

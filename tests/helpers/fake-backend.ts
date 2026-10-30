@@ -27,7 +27,7 @@ export class FakeBackend {
   advance(ms: number) { this.clockOffsetMs += ms; }
 
   // What the DB trigger + create_secure_order would produce for a storefront order.
-  createOrder(opts: { id?: string; total: number; items: { sku: string | null; quantity: number; unit_price: number }[]; userId?: string | null }) {
+  createOrder(opts: { id?: string; total: number; items: { product_id: string | null; quantity: number; unit_price: number }[]; userId?: string | null }) {
     const id = opts.id ?? `00000000-0000-4000-8000-${String(++this.seq).padStart(12, "0")}`;
     const createdAt = new Date(this.now()).toISOString();
     this.orders.set(id, { id, user_id: opts.userId === undefined ? "user-1" : opts.userId, total_amount: opts.total, customer_name: "Sara Ali", phone_1: "01012345678", governorate: "Cairo", created_at: createdAt });

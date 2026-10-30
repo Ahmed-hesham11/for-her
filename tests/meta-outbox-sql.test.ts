@@ -17,7 +17,7 @@ before(async () => {
     create role service_role;
     create table public.orders (id uuid primary key default gen_random_uuid(), user_id uuid, created_at timestamptz not null default now(),
       total_amount numeric not null default 0, customer_name text, phone_1 text, governorate text);
-    create table public.order_items (id uuid primary key default gen_random_uuid(), order_id uuid not null references public.orders(id), sku text, quantity int, unit_price numeric);
+    create table public.order_items (id uuid primary key default gen_random_uuid(), order_id uuid not null references public.orders(id), product_id text, quantity int, unit_price numeric);
     insert into public.orders (user_id, total_amount) values (gen_random_uuid(), 1);
   `);
   await db.exec(migration);

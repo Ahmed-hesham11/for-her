@@ -21,7 +21,7 @@ export type OrderSnapshot = {
   customer_name: string | null;
   phone_1: string | null;
   governorate: string | null;
-  items: { sku: string | null; quantity: number; unit_price: number }[];
+  items: { product_id: string | null; quantity: number; unit_price: number }[];
 };
 
 export interface OutboxStore {
@@ -52,12 +52,11 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 // never from the send time; value and items come from the saved order.
 export function buildPurchaseEvent(row: OutboxRow, order: OrderSnapshot, fallbackSourceUrl: string | null, nowMs: number): MetaEvent {
   const items = order.items.filter((item) => Number.isInteger(item.quantity) && item.quantity > 0);
-  // Catalog IDs are SKUs. Items without one are left out of content_ids; there
-  // is deliberately no fallback to the product UUID.
+  // Item IDs are product ids. Items without one are left out of content_ids.
   const withSku = items.flatMap((item) => {
-    const sku = item.sku?.trim();
+    const id = item.product_id?.trim();
     const price = Number(item.unit_price);
-    return sku && Number.isFinite(price) && price >= 0 ? [{ sku, quantity: item.quantity, price }] : [];
+    return id && Number.isFinite(price) && price >= 0 ? [{ id, quantity: item.quantity, price }] : [];
   });
   const sourceUrl = row.context?.source_url ?? fallbackSourceUrl;
 
@@ -76,8 +75,8 @@ export function buildPurchaseEvent(row: OutboxRow, order: OrderSnapshot, fallbac
       num_items: items.reduce((sum, item) => sum + item.quantity, 0),
       ...(withSku.length > 0
         ? {
-            content_ids: withSku.map((item) => item.sku),
-            contents: withSku.map((item) => ({ id: item.sku, quantity: item.quantity, item_price: item.price })),
+            content_ids: withSku.map((item) => item.id),
+            contents: withSku.map((item) => ({ id: item.id, quantity: item.quantity, item_price: item.price })),
           }
         : {}),
     },
@@ -126,8 +125,8 @@ export async function processOutbox(options: {
         record(await store.markFailed(row, "INVALID_VALUE"), "failed");
         continue;
       }
-      if (order.items.some((item) => !item.sku?.trim())) {
-        console.warn("[meta-outbox] order has item(s) without a SKU; excluded from content_ids:", row.order_id);
+      if (order.items.some((item) => !item.product_id?.trim())) {
+        console.warn("[meta-outbox] order has item(s) without a product id; excluded from content_ids:", row.order_id);
       }
 
       const result = await send(buildPurchaseEvent(row, order, fallbackSourceUrl, now()));

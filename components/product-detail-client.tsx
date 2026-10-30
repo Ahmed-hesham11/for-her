@@ -67,7 +67,7 @@ export function ProductDetailClient({
   const isLowStock = product.stock > 0 && product.stock <= 5;
 
   useEffect(() => {
-    trackViewContent({ sku: product.sku, name: product.name, price: product.price });
+    trackViewContent({ id: product.id, name: product.name, price: product.price });
     // Once per product viewed, not on every re-render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);

@@ -17,13 +17,13 @@ declare global {
   }
 }
 
-export type PixelItem = { sku: string; name: string; price: number; quantity: number };
+export type PixelItem = { id: string; name: string; price: number; quantity: number };
 
-// Meta Catalog item IDs are product SKUs, never the internal UUID. An item
-// without a SKU (or with a bad price) is dropped rather than sent under the
+// Item IDs sent to Meta are the product id. An item
+// without an id (or with a bad price) is dropped rather than sent under the
 // wrong ID, which would break catalog matching.
-function validItems<T extends { sku: string; price: number }>(items: T[], event: string): T[] {
-  const valid = items.filter((item) => item.sku?.trim() && Number.isFinite(item.price) && item.price >= 0);
+function validItems<T extends { id: string; price: number }>(items: T[], event: string): T[] {
+  const valid = items.filter((item) => item.id?.trim() && Number.isFinite(item.price) && item.price >= 0);
   if (valid.length !== items.length) console.warn(`[meta-pixel] ${event}: skipped ${items.length - valid.length} item(s) with missing SKU or invalid price`);
   return valid;
 }
@@ -58,8 +58,8 @@ export function trackPageView() {
 function ecommerceParams(items: PixelItem[]) {
   return {
     content_type: "product",
-    content_ids: items.map((item) => item.sku),
-    contents: items.map((item) => ({ id: item.sku, quantity: item.quantity, item_price: item.price })),
+    content_ids: items.map((item) => item.id),
+    contents: items.map((item) => ({ id: item.id, quantity: item.quantity, item_price: item.price })),
     num_items: items.reduce((sum, item) => sum + item.quantity, 0),
     currency: CURRENCY,
   };
@@ -69,9 +69,9 @@ export function trackViewContent(item: Omit<PixelItem, "quantity">) {
   if (validItems([item], "ViewContent").length === 0) return;
   track("ViewContent", {
     content_type: "product",
-    content_ids: [item.sku],
+    content_ids: [item.id],
     content_name: item.name,
-    contents: [{ id: item.sku, quantity: 1, item_price: item.price }],
+    contents: [{ id: item.id, quantity: 1, item_price: item.price }],
     value: item.price,
     currency: CURRENCY,
   });
