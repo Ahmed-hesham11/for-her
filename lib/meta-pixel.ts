@@ -77,6 +77,22 @@ export function trackViewContent(item: Omit<PixelItem, "quantity">) {
   });
 }
 
+export function trackAddToWishlist(item: Omit<PixelItem, "quantity">) {
+  if (validItems([item], "AddToWishlist").length === 0) return;
+  track("AddToWishlist", {
+    content_type: "product",
+    content_ids: [item.id],
+    content_name: item.name,
+    contents: [{ id: item.id, quantity: 1, item_price: item.price }],
+    value: item.price,
+    currency: CURRENCY,
+  });
+}
+
+export function trackCompleteRegistration() {
+  track("CompleteRegistration");
+}
+
 export function trackSearch(searchString: string) {
   track("Search", { search_string: searchString });
 }

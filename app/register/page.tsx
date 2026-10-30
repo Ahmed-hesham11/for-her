@@ -6,6 +6,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { AuthShell } from "@/components/auth-shell";
 import { useAuth } from "@/components/auth-provider";
 import { useLocale } from "@/components/locale-provider";
+import { trackCompleteRegistration } from "@/lib/meta-pixel";
 
 const MIN_PASSWORD_LENGTH = 8;
 
@@ -62,6 +63,7 @@ export default function RegisterPage() {
         throw new Error(body.error ?? "Unable to create your account right now.");
       }
 
+      trackCompleteRegistration();
       await refreshProfile();
       router.push("/account");
     } catch (registerError) {

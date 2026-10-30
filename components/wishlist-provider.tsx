@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Product } from "@/lib/storefront-data";
 import { useAuth } from "@/components/auth-provider";
 import { useLocale } from "@/components/locale-provider";
+import { trackAddToWishlist } from "@/lib/meta-pixel";
 
 type WishlistStateValue = {
   items: Product[];
@@ -91,6 +92,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         setItems((current) => current.filter((item) => item.id !== product.id));
       } else {
         setItems(nextItems);
+        trackAddToWishlist({ id: product.id, name: product.name, price: product.price });
       }
     } catch {
       setError(t.wishlist.addError);

@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 // Server copy of browser pixel events (Conversions API). The browser sends the
 // same event_id to the pixel, so Meta de-duplicates the pair. Purchase is NOT
 // accepted here: it goes through the order outbox.
-const ALLOWED = new Set(["PageView", "ViewContent", "Search", "AddToCart", "InitiateCheckout"]);
+const ALLOWED = new Set(["PageView", "ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddToWishlist", "CompleteRegistration"]);
 const CURRENCY = "EGP";
 
 type Body = { event_name?: unknown; event_id?: unknown; event_time?: unknown; source_url?: unknown; custom_data?: unknown };
