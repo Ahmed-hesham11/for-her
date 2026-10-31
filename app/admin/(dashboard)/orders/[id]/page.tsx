@@ -70,14 +70,20 @@ export default async function AdminOrderDetailPage({
                   <tr key={item.id}>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 shrink-0 overflow-hidden rounded-[8px] bg-[#f1e7e0]">
+                        <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[10px] bg-[#f1e7e0]">
                           {item.image_url ? (
                             // eslint-disable-next-line @next/next/no-img-element -- product images can come from any host, not just the allow-listed next/image hosts.
                             <img src={item.image_url} alt={item.product_name} className="h-full w-full object-cover" />
                           ) : null}
                         </div>
                         <div className="min-w-0">
-                          <span className="font-medium text-[#221d1b]">{item.product_name}</span>
+                          {item.product_id ? (
+                            <Link href={`/admin/products/${item.product_id}?from=/admin/orders/${order.id}`} className="font-medium text-[#221d1b] underline-offset-4 hover:text-[#8a3f34] hover:underline">
+                              {item.product_name}
+                            </Link>
+                          ) : (
+                            <span className="font-medium text-[#221d1b]">{item.product_name}</span>
+                          )}
                           {item.color_name || item.size_name ? (
                             <span className="block text-xs text-[#8a7c78]">
                               {item.color_name ? `اللون: ${item.color_name}` : ""}

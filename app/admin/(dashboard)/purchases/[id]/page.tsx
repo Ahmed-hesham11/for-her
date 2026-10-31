@@ -50,7 +50,11 @@ export default async function AdminPurchaseDetailPage({
               <tbody className="divide-y divide-[#eadfd7]">
                 {items.map((item) => (
                   <tr key={item.id}>
-                    <td className="px-4 py-3 font-medium text-[#221d1b]">{item.product_name}</td>
+                    <td className="px-4 py-3 font-medium text-[#221d1b]">
+                      <Link href={`/admin/products/${item.product_id}?from=/admin/purchases/${purchase.id}`} className="underline-offset-4 hover:text-[#8a3f34] hover:underline">
+                        {item.product_name}
+                      </Link>
+                    </td>
                     <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{item.quantity}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{formatEgp(item.unit_cost)}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">{formatEgp(item.total_cost)}</td>

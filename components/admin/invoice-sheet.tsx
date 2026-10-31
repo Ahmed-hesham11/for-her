@@ -52,7 +52,7 @@ export function InvoiceSheet({ order, items, className = "" }: { order: AdminOrd
               <tr key={item.id}>
                 <td className="px-3 py-3">
                   <div className="flex items-center gap-3">
-                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-[8px] bg-[#f1e7e0]">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[8px] bg-[#f1e7e0]">
                       {item.image_url ? (
                         // Product images can come from any host (Supabase Storage or external), not just the allow-listed next/image hosts.
                         // eslint-disable-next-line @next/next/no-img-element
