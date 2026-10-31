@@ -41,6 +41,7 @@ export default async function EditCategoryPage({
           image_url: category.image_url ?? "",
           is_active: category.is_active,
           parent_id: category.parent_id,
+          show_on_home: category.show_on_home,
         }}
       />
     </div>

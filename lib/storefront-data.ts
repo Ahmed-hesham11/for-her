@@ -4,6 +4,7 @@ export type Category = {
   image: string;
   slug: string;
   parentId: string | null;
+  showOnHome: boolean;
 };
 
 export type ProductColor = {

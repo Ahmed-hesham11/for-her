@@ -18,7 +18,7 @@ export default async function HomePage() {
   const [allCategories, bestSellers] = await Promise.all([getCategories(), getBestSellers(5)]);
   // "Clothes" shows as one featured tile here — its subcategories are
   // browsed on /categories/clothes, not listed individually on the homepage.
-  const topCategories = allCategories.filter((category) => category.parentId === null);
+  const topCategories = allCategories.filter((category) => category.parentId === null && category.showOnHome);
   if (process.env.NODE_ENV !== "production") console.debug(`[perf] route render /: ${(performance.now() - startedAt).toFixed(0)}ms`);
 
   return (

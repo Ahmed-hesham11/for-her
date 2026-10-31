@@ -19,7 +19,7 @@
 import { unlink } from "node:fs/promises";
 import { requireAdmin, requireSuperAdmin } from "@/lib/admin/auth";
 import { logAdminAction } from "@/lib/admin/audit";
-import { createCategory, updateCategory, type CategoryInput } from "@/lib/admin/categories";
+import { createCategory, reorderCategories, updateCategory, type CategoryInput } from "@/lib/admin/categories";
 import { createCoupon, updateCoupon, deleteCoupon, type CouponInput } from "@/lib/admin/coupons";
 import {
   createManualOrder,
@@ -200,6 +200,25 @@ export async function updateCategoryAction(id: string, input: CategoryInput) {
       entity_type: "category",
       entity_id: id,
       summary: `عدّل الفئة "${input.name}"`,
+    });
+  }
+
+  return result;
+}
+
+export async function reorderCategoriesAction(orderedIds: string[]) {
+  const { profile } = await requireAdmin();
+  if (orderedIds.length === 0 || orderedIds.length > 200) throw new Error("Invalid category list.");
+
+  const client = requireClient();
+  const result = await reorderCategories(client, orderedIds);
+
+  if (!result.error) {
+    await logAdminAction(client, profile, {
+      action: "update",
+      entity_type: "category",
+      entity_id: orderedIds[0],
+      summary: "غيّر ترتيب الفئات",
     });
   }
 

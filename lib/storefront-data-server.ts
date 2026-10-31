@@ -45,8 +45,9 @@ export async function getCategories(): Promise<Category[]> {
 
   const { data, error } = await supabase
     .from("categories")
-    .select("id, name, image_url, parent_id")
+    .select("id, name, image_url, parent_id, show_on_home")
     .eq("is_active", true)
+    .order("sort_order", { ascending: true })
     .order("name", { ascending: true });
 
   if (error || !data) return [];
@@ -57,6 +58,7 @@ export async function getCategories(): Promise<Category[]> {
     image: category.image_url || CATEGORY_IMAGE_FALLBACKS[category.name.toLowerCase()] || FALLBACK_IMAGE,
     slug: category.name.toLowerCase().replace(/\s+/g, "-"),
     parentId: category.parent_id ? String(category.parent_id) : null,
+    showOnHome: category.show_on_home !== false,
   }));
 }
 

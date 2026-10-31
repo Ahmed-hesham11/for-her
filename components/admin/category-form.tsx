@@ -10,7 +10,7 @@ import { ImageUploadField } from "@/components/admin/image-upload-field";
 const INPUT_CLASS = "w-full rounded-full border border-[#e4d4cd] bg-white px-4 py-3 text-sm outline-none focus:border-[#c8a78f]";
 const LABEL_CLASS = "text-[0.72rem] text-[#7a6762]";
 
-const DEFAULT_CATEGORY: CategoryInput = { name: "", image_url: "", is_active: true, parent_id: null };
+const DEFAULT_CATEGORY: CategoryInput = { name: "", image_url: "", is_active: true, parent_id: null, show_on_home: true };
 
 export function CategoryForm({
   parentOptions,
@@ -96,6 +96,13 @@ export function CategoryForm({
         <input type="checkbox" checked={fields.is_active} onChange={(event) => update("is_active", event.target.checked)} className="h-4 w-4 accent-[#1d1a19]" />
         <span>نشط (مرئي للعملاء)</span>
       </label>
+
+      {!fields.parent_id ? (
+        <label className="flex items-center gap-3 text-sm text-[#524947]">
+          <input type="checkbox" checked={fields.show_on_home} onChange={(event) => update("show_on_home", event.target.checked)} className="h-4 w-4 accent-[#1d1a19]" />
+          <span>إظهار في الصفحة الرئيسية</span>
+        </label>
+      ) : null}
 
       {error ? <p className="rounded-2xl border border-[#f1c9c0] bg-[#fff5f3] px-3 py-2 text-sm text-[#7a3a32]">{error}</p> : null}
       {success ? <p className="rounded-2xl border border-[#cbe6d5] bg-[#eefaf3] px-3 py-2 text-sm text-[#1e5b3d]">{success}</p> : null}
