@@ -127,7 +127,6 @@ const en = {
   productDetail: {
     products: "Products",
     onOffer: "On offer",
-    sku: "SKU",
     buyNow: "Buy now",
     noDescription: "No description available for this product yet.",
     lowStock: (count: number) => `Only ${count} left in stock`,
@@ -212,7 +211,6 @@ const en = {
     placedOn: (date: string) => `Placed on ${date}`,
     products: "Products",
     noItems: "No items found for this order.",
-    sku: "SKU",
     qty: "Qty",
     color: "Color",
     size: "Size",
@@ -463,7 +461,6 @@ const ar: typeof en = {
   productDetail: {
     products: "المنتجات",
     onOffer: "عرض خاص",
-    sku: "رمز المنتج",
     buyNow: "اشترِ الآن",
     noDescription: "لا يوجد وصف لهذا المنتج حتى الآن.",
     lowStock: (count: number) => `متبقّي ${count} فقط في المخزون`,
@@ -548,7 +545,6 @@ const ar: typeof en = {
     placedOn: (date: string) => `تم الطلب في ${date}`,
     products: "المنتجات",
     noItems: "لا توجد عناصر لهذا الطلب.",
-    sku: "رمز المنتج",
     qty: "الكمية",
     color: "اللون",
     size: "المقاس",

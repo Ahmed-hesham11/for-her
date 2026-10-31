@@ -14,7 +14,6 @@ export function TopProductsTable({ products }: { products: TopSellingProduct[] }
         <tr key={product.product_id} className="transition hover:bg-[#faf6f3]">
           <td className="px-4 py-3">
             <p className="font-medium text-[#221d1b]">{product.product_name}</p>
-            {product.sku ? <p className="text-xs text-[#8a7c78]">{product.sku}</p> : null}
           </td>
           <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.units_sold}</td>
           <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">{formatEgp(product.revenue)}</td>

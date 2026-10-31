@@ -53,6 +53,16 @@ export function normalizePhone(raw: string) {
   return `20${digits.replace(/^0+/, "")}`;
 }
 
+// Meta wants first/last name lowercase with punctuation and digits removed.
+// Whitespace-separated: the first word is the first name, the rest the last name.
+export function nameFields(fullName: string | null | undefined): { fn?: string[]; ln?: string[] } {
+  const parts = fullName?.trim().toLowerCase().split(/\s+/).map((p) => p.replace(/[^\p{L}]/gu, "")).filter(Boolean) ?? [];
+  return {
+    ...(parts[0] ? { fn: [sha256(parts[0])] } : {}),
+    ...(parts.length > 1 ? { ln: [sha256(parts.slice(1).join(" "))] } : {}),
+  };
+}
+
 export function buildContext(input: {
   email: string | null;
   userId: string | null;
@@ -81,9 +91,7 @@ export function buildUserData(
   if (context?.em) userData.em = [context.em];
   const phone = order.phone_1 ? normalizePhone(order.phone_1) : null;
   if (phone) userData.ph = [sha256(phone)];
-  const nameParts = order.customer_name?.trim().toLowerCase().split(/\s+/).filter(Boolean) ?? [];
-  if (nameParts[0]) userData.fn = [sha256(nameParts[0])];
-  if (nameParts.length > 1) userData.ln = [sha256(nameParts.slice(1).join(" "))];
+  Object.assign(userData, nameFields(order.customer_name));
   const city = order.governorate?.trim().toLowerCase().replace(/[^\p{L}]/gu, "");
   if (city) userData.ct = [sha256(city)];
   userData.country = [sha256("eg")];

@@ -12,7 +12,7 @@ const ctx: OutboxContext = { em: sha256("a@b.com"), external_id: sha256("u1"), c
 
 function makeOrder(over: Partial<OrderSnapshot> = {}): OrderSnapshot {
   return { id: ORDER_ID, user_id: "u1", total_amount: 540, customer_name: "Sara Ali", phone_1: "01012345678", governorate: "Cairo",
-    items: [{ product_id: "DRESS-001", quantity: 2, unit_price: 200 }, { product_id: "BAG-7", quantity: 1, unit_price: 100 }], ...over };
+    items: [{ product_id: "11111111-1111-4111-8111-111111111111", quantity: 2, unit_price: 200 }, { product_id: "22222222-2222-4222-8222-222222222222", quantity: 1, unit_price: 100 }], ...over };
 }
 
 function makeRow(over: Partial<OutboxRow> = {}): OutboxRow {
@@ -154,7 +154,7 @@ describe("payload", () => {
     await run(store, clock, async (e) => { events.push(e); return { ok: false, retryable: true, reason: "X" }; });
     clock.now += 3_600_000; await run(store, clock, async (e) => { events.push(e); return { ok: true }; });
     assert.equal(events.length, 2); assert.equal(events[0].event_id, ORDER_ID); assert.equal(events[1].event_id, ORDER_ID);
-    assert.deepEqual(events[0].custom_data.content_ids, ["DRESS-001", "BAG-7"]);
+    assert.deepEqual(events[0].custom_data.content_ids, ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"]);
     assert.equal(events[0].custom_data.num_items, 3); assert.equal(events[0].custom_data.value, 540);
     assert.deepEqual(events[0].custom_data, events[1].custom_data);
     assert.deepEqual(events[0].user_data, events[1].user_data);
@@ -170,8 +170,8 @@ describe("payload", () => {
   });
 
   test("items without a product id are excluded", () => {
-    const mixed = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ product_id: "A-1", quantity: 1, unit_price: 10 }, { product_id: null, quantity: 1, unit_price: 5 }, { product_id: "  ", quantity: 1, unit_price: 5 }] }), null, T0 + 1);
-    assert.deepEqual(mixed.custom_data.content_ids, ["A-1"]); assert.equal(mixed.custom_data.num_items, 3);
+    const mixed = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ product_id: "44444444-4444-4444-8444-444444444444", quantity: 1, unit_price: 10 }, { product_id: null, quantity: 1, unit_price: 5 }, { product_id: "  ", quantity: 1, unit_price: 5 }] }), null, T0 + 1);
+    assert.deepEqual(mixed.custom_data.content_ids, ["44444444-4444-4444-8444-444444444444"]); assert.equal(mixed.custom_data.num_items, 3);
     const none = buildPurchaseEvent(makeRow(), makeOrder({ items: [{ product_id: null, quantity: 1, unit_price: 5 }] }), null, T0 + 1);
     assert.equal("content_ids" in none.custom_data, false); assert.equal(none.custom_data.value, 540);
     assert.equal(JSON.stringify(none.custom_data).includes(ORDER_ID), false);

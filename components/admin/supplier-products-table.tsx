@@ -14,11 +14,10 @@ export function SupplierProductsTable({ products }: { products: SuppliedProduct[
   }
 
   return (
-    <AdminTable headers={["المنتج", "SKU", "سعر الشراء الحالي", "عدد مرات الشراء", "إجمالي الكمية", "آخر عملية شراء", "الحالة"]}>
+    <AdminTable headers={["المنتج", "سعر الشراء الحالي", "عدد مرات الشراء", "إجمالي الكمية", "آخر عملية شراء", "الحالة"]}>
       {products.map((product) => (
         <tr key={product.product_id} onClick={() => router.push(`/admin/products/${product.product_id}`)} className="cursor-pointer transition hover:bg-[#faf6f3]">
           <td className="px-4 py-3 font-medium text-[#221d1b]">{product.product_name}</td>
-          <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.sku || "—"}</td>
           <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.purchase_price === null ? "—" : formatEgp(product.purchase_price)}</td>
           <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.purchase_count}</td>
           <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.total_quantity}</td>

@@ -42,7 +42,6 @@ export function InvoiceSheet({ order, items, className = "" }: { order: AdminOrd
           <thead>
             <tr className="border-b border-[#eadfd7] bg-[#f7f1ee] text-[0.66rem] uppercase tracking-[0.08em] text-[#8a7c78]">
               <th className="px-3 py-3 font-medium">المنتج</th>
-              <th className="px-3 py-3 font-medium">الرمز</th>
               <th className="px-3 py-3 font-medium">الكمية</th>
               <th className="px-3 py-3 font-medium">سعر الوحدة</th>
               <th className="px-3 py-3 font-medium">الإجمالي</th>
@@ -72,7 +71,6 @@ export function InvoiceSheet({ order, items, className = "" }: { order: AdminOrd
                         </div>
                   </div>
                 </td>
-                <td className="whitespace-nowrap px-3 py-3 text-[#8a7c78]">{item.sku ?? "—"}</td>
                 <td className="whitespace-nowrap px-3 py-3 text-[#4a4442]">{item.quantity}</td>
                 <td className="whitespace-nowrap px-3 py-3 text-[#4a4442]">{formatEgp(item.unit_price)}</td>
                 <td className="whitespace-nowrap px-3 py-3 font-medium text-[#221d1b]">{formatEgp(item.total_price)}</td>

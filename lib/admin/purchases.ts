@@ -111,7 +111,6 @@ export async function getAdminPurchaseById(supabase: SupabaseClient, id: string)
 export type SuppliedProduct = {
   product_id: string;
   product_name: string;
-  sku: string | null;
   is_active: boolean;
   total_quantity: number;
   purchase_count: number;
@@ -139,7 +138,7 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
     ? { data: [], error: null }
     : await supabase
         .from("purchase_items")
-        .select("purchase_id, product_id, quantity, products(name, sku, is_active)")
+        .select("purchase_id, product_id, quantity, products(name, is_active)")
         .in("purchase_id", purchaseIds);
 
   if (itemsError) return { products: [], error: itemsError.message };
@@ -148,7 +147,7 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
     purchase_id: string;
     product_id: string;
     quantity: number;
-    products: { name: string; sku: string | null; is_active: boolean } | { name: string; sku: string | null; is_active: boolean }[] | null;
+    products: { name: string; is_active: boolean } | { name: string; is_active: boolean }[] | null;
   };
 
   const byProduct = new Map<string, SuppliedProduct>();
@@ -167,7 +166,6 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
       byProduct.set(row.product_id, {
         product_id: row.product_id,
         product_name: product.name,
-        sku: product.sku,
         is_active: product.is_active,
         total_quantity: Number(row.quantity),
         purchase_count: 0,
@@ -183,14 +181,14 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
 
   const { data: linked, error: linkedError } = await supabase
     .from("supplier_products")
-    .select("product_id, purchase_price, products(name, sku, is_active)")
+    .select("product_id, purchase_price, products(name, is_active)")
     .eq("supplier_id", supplierId);
   if (linkedError) return { products: [], error: linkedError.message };
 
   type LinkRow = {
     product_id: string;
     purchase_price: number;
-    products: { name: string; sku: string | null; is_active: boolean } | { name: string; sku: string | null; is_active: boolean }[] | null;
+    products: { name: string; is_active: boolean } | { name: string; is_active: boolean }[] | null;
   };
   for (const row of (linked ?? []) as unknown as LinkRow[]) {
     const price = Number(row.purchase_price);
@@ -204,7 +202,6 @@ export async function getProductsSuppliedBySupplier(supabase: SupabaseClient, su
     byProduct.set(row.product_id, {
       product_id: row.product_id,
       product_name: product.name,
-      sku: product.sku,
       is_active: product.is_active,
       total_quantity: 0,
       purchase_count: 0,

@@ -19,12 +19,15 @@ declare global {
 
 export type PixelItem = { id: string; name: string; price: number; quantity: number };
 
-// Item IDs sent to Meta are the product id. An item
-// without an id (or with a bad price) is dropped rather than sent under the
-// wrong ID, which would break catalog matching.
+// The product UUID (products.id) is the only product identifier: it is the
+// Meta catalog item id and what every event sends in content_ids. Anything that
+// is not a UUID is dropped rather than sent, since it could never match the catalog.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const isProductId = (value: unknown): value is string => typeof value === "string" && UUID_PATTERN.test(value);
+
 function validItems<T extends { id: string; price: number }>(items: T[], event: string): T[] {
-  const valid = items.filter((item) => item.id?.trim() && Number.isFinite(item.price) && item.price >= 0);
-  if (valid.length !== items.length) console.warn(`[meta-pixel] ${event}: skipped ${items.length - valid.length} item(s) with missing SKU or invalid price`);
+  const valid = items.filter((item) => isProductId(item.id) && Number.isFinite(item.price) && item.price >= 0);
+  if (valid.length !== items.length) console.warn(`[meta-pixel] ${event}: skipped ${items.length - valid.length} item(s) with a missing/non-UUID product id or invalid price`);
   return valid;
 }
 
@@ -115,11 +118,13 @@ export function trackInitiateCheckout(allItems: PixelItem[]) {
   });
 }
 
-// Fires at most once per order, even across retries, re-renders or reloads:
-// the order id doubles as Meta's eventID (so it would also dedupe against a
-// future server-side Conversions API event) and is remembered in localStorage.
-// `value` must be the server-confirmed order total.
-export function trackPurchase(orderId: string, value: number) {
+// Fires at most once per order, even across retries, re-renders or reloads.
+// The order id is Meta's eventID, and the server-side Purchase (outbox row
+// event_id = orders.id) uses the same one, so Meta dedupes the pair. It is
+// remembered in localStorage. `value` must be the server-confirmed order total;
+// `items` are the purchased products (id = product UUID) so content_ids match
+// the catalog. The server copy is NOT sent from here: it comes from the outbox.
+export function trackPurchase(orderId: string, value: number, items: PixelItem[] = []) {
   if (!Number.isFinite(value) || value < 0) return;
   const storageKey = `meta_purchase_${orderId}`;
   try {
@@ -129,5 +134,6 @@ export function trackPurchase(orderId: string, value: number) {
     // Storage unavailable (private mode): fall through; the call site only
     // fires once per successful order anyway.
   }
-  fbq("track", "Purchase", { value, currency: CURRENCY }, { eventID: orderId });
+  const purchased = validItems(items, "Purchase");
+  fbq("track", "Purchase", { ...(purchased.length > 0 ? ecommerceParams(purchased) : { content_type: "product" }), value, currency: CURRENCY }, { eventID: orderId });
 }

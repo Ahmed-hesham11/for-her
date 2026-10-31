@@ -23,7 +23,6 @@ const LABEL_CLASS = "text-[0.72rem] text-[#7a6762]";
 
 const DEFAULT_PRODUCT: ProductInput = {
   name: "",
-  sku: "",
   description: "",
   category_id: "",
   purchase_price: 0,
@@ -40,12 +39,6 @@ const DEFAULT_PRODUCT: ProductInput = {
   sizes: [],
   suppliers: [],
 };
-
-// Products no longer take a manually-typed SKU — a new product gets one
-// generated automatically at save time (see handleSubmit).
-function generateSku(): string {
-  return `SKU-${crypto.randomUUID().slice(0, 8).toUpperCase()}`;
-}
 
 function validate(fields: ProductInput): string | null {
   if (!fields.name.trim()) return "اسم المنتج مطلوب.";
@@ -211,7 +204,6 @@ export function ProductForm({
       const { image_url, images } = splitMainAndExtras(resolvedImages);
       const submitFields: ProductInput = {
         ...fields,
-        sku: !productId && !fields.sku.trim() ? generateSku() : fields.sku,
         image_url,
         images,
         videos: resolvedVideoSlots.map((slot) => slot.url),

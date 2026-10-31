@@ -85,7 +85,6 @@ type ProductRow = {
   image_url: string | null;
   category_id: string | null;
   description: string | null;
-  sku: string | null;
   stock_quantity: number | null;
   has_sizes?: boolean | null;
   product_colors?: ColorRow[] | null;
@@ -117,14 +116,13 @@ function mapProductRow(item: ProductRow, categoryNames: Map<string, string>): Pr
     image,
     category: item.category_id ? categoryNames.get(String(item.category_id)) ?? "Accessories" : "Accessories",
     description: item.description || "",
-    sku: item.sku ?? "",
     stock: Number(item.stock_quantity ?? 0),
     hasSizes: Boolean(item.has_sizes),
     ...(colors.length > 0 ? { colors } : {}),
   };
 }
 
-const BASE_PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, sku, stock_quantity, has_sizes";
+const BASE_PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, stock_quantity, has_sizes";
 // Listings only need each color's name + main image for the card swatches —
 // the per-color extra images are fetched on the detail page alone.
 const PRODUCT_FIELDS = `${BASE_PRODUCT_FIELDS}, product_colors(id, name, image_url, sort_order)`;

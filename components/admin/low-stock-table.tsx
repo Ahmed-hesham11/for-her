@@ -13,7 +13,7 @@ export function LowStockTable({ products }: { products: LowStockProduct[] }) {
   }
 
   return (
-    <AdminTable headers={["المنتج", "الرمز", "المخزون الحالي", "الحالة"]}>
+    <AdminTable headers={["المنتج", "المخزون الحالي", "الحالة"]}>
       {products.map((product) => {
         const isOutOfStock = product.stock_quantity <= 0;
 
@@ -24,7 +24,6 @@ export function LowStockTable({ products }: { products: LowStockProduct[] }) {
             className="cursor-pointer transition hover:bg-[#faf6f3]"
           >
             <td className="px-4 py-3 font-medium text-[#221d1b]">{product.name}</td>
-            <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{product.sku}</td>
             <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.stock_quantity}</td>
             <td className="whitespace-nowrap px-4 py-3">
               <span

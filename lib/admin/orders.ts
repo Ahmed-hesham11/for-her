@@ -42,7 +42,6 @@ export type AdminOrderItem = {
   // 20261008010000_manual_order_custom_items.sql.
   product_id: string | null;
   product_name: string;
-  sku: string | null;
   quantity: number;
   unit_price: number;
   total_price: number;
@@ -168,7 +167,7 @@ export async function getAdminOrderById(supabase: SupabaseClient, id: string): P
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, product_id, product_name, sku, quantity, unit_price, total_price, image_url, color_name, size_name, products(image_url)")
+    .select("id, product_id, product_name, quantity, unit_price, total_price, image_url, color_name, size_name, products(image_url)")
     .eq("order_id", id)
     .order("created_at", { ascending: true });
 

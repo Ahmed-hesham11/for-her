@@ -282,12 +282,6 @@ export function ProductDetailClient({
           <p className={`text-[1rem] leading-7 ${product.description ? "text-[#5f5451]" : "italic text-[#9c8d88]"}`}>
             {product.description || t.productDetail.noDescription}
           </p>
-          <div className="rounded-[18px] border border-[#eaded7] bg-[#f8f1ee] p-4">
-            <div className="flex items-center justify-between">
-              <span className="text-[0.7rem] uppercase tracking-[0.18em] text-[#786d6a]">{t.productDetail.sku}</span>
-              <span className="text-sm text-[#2f2826]">{product.sku}</span>
-            </div>
-          </div>
         </section>
 
         <section className="mt-16">

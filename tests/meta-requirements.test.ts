@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 
 const PRODUCT_UUID = "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee";
-const twoItems = [{ product_id: "DRESS-001", quantity: 2, unit_price: 200 }, { product_id: "BAG-7", quantity: 1, unit_price: 100 }];
+const twoItems = [{ product_id: "11111111-1111-4111-8111-111111111111", quantity: 2, unit_price: 200 }, { product_id: "22222222-2222-4222-8222-222222222222", quantity: 1, unit_price: 100 }];
 
 // ---- browser harness ------------------------------------------------------
 type FbqCall = unknown[];
@@ -137,9 +137,9 @@ describe("[R2] PageView fires once on load and on navigation", () => {
 describe("[R3] ViewContent", () => {
   test("[R3] sends the product id with name, value and EGP", () => {
     const calls = fakeWindow();
-    trackViewContent({ id: "DRESS-001", name: "Summer Dress", price: 250 });
+    trackViewContent({ id: "11111111-1111-4111-8111-111111111111", name: "Summer Dress", price: 250 });
     assert.equal(calls.length, 1); assert.equal(calls[0][1], "ViewContent");
-    assert.deepEqual(calls[0][2], { content_type: "product", content_ids: ["DRESS-001"], content_name: "Summer Dress", contents: [{ id: "DRESS-001", quantity: 1, item_price: 250 }], value: 250, currency: "EGP" });
+    assert.deepEqual(calls[0][2], { content_type: "product", content_ids: ["11111111-1111-4111-8111-111111111111"], content_name: "Summer Dress", contents: [{ id: "11111111-1111-4111-8111-111111111111", quantity: 1, item_price: 250 }], value: 250, currency: "EGP" });
   });
   test("[R3] the product page passes product.id, and ViewContent runs once per product id", () => {
     const src = read("components/product-detail-client.tsx");
@@ -151,10 +151,10 @@ describe("[R3] ViewContent", () => {
 describe("[R4] AddToCart", () => {
   test("[R4] sends product id, quantity and value = price × quantity", () => {
     const calls = fakeWindow();
-    trackAddToCart({ id: "DRESS-001", name: "Dress", price: 200, quantity: 3 });
+    trackAddToCart({ id: "11111111-1111-4111-8111-111111111111", name: "Dress", price: 200, quantity: 3 });
     const p = calls[0][2] as Record<string, unknown>;
-    assert.equal(calls[0][1], "AddToCart"); assert.deepEqual(p.content_ids, ["DRESS-001"]); assert.equal(p.value, 600); assert.equal(p.num_items, 3); assert.equal(p.currency, "EGP");
-    assert.deepEqual(p.contents, [{ id: "DRESS-001", quantity: 3, item_price: 200 }]);
+    assert.equal(calls[0][1], "AddToCart"); assert.deepEqual(p.content_ids, ["11111111-1111-4111-8111-111111111111"]); assert.equal(p.value, 600); assert.equal(p.num_items, 3); assert.equal(p.currency, "EGP");
+    assert.deepEqual(p.contents, [{ id: "11111111-1111-4111-8111-111111111111", quantity: 3, item_price: 200 }]);
   });
   test("[R4] the cart fires it only after the server accepted the add (not on failure paths)", () => {
     const src = read("components/cart-provider.tsx");
@@ -170,9 +170,9 @@ describe("[R4] AddToCart", () => {
 describe("[R5] InitiateCheckout", () => {
   test("[R5] sends every cart product id, total quantity and the summed value", () => {
     const calls = fakeWindow();
-    trackInitiateCheckout([{ id: "DRESS-001", name: "a", price: 200, quantity: 2 }, { id: "BAG-7", name: "b", price: 100, quantity: 1 }]);
+    trackInitiateCheckout([{ id: "11111111-1111-4111-8111-111111111111", name: "a", price: 200, quantity: 2 }, { id: "22222222-2222-4222-8222-222222222222", name: "b", price: 100, quantity: 1 }]);
     const p = calls[0][2] as Record<string, unknown>;
-    assert.equal(calls[0][1], "InitiateCheckout"); assert.deepEqual(p.content_ids, ["DRESS-001", "BAG-7"]); assert.equal(p.num_items, 3); assert.equal(p.value, 500); assert.equal(p.currency, "EGP");
+    assert.equal(calls[0][1], "InitiateCheckout"); assert.deepEqual(p.content_ids, ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"]); assert.equal(p.num_items, 3); assert.equal(p.value, 500); assert.equal(p.currency, "EGP");
   });
   test("[R5] the checkout page fires it once per visit, guarded by a ref", () => {
     const src = read("app/checkout/page.tsx");
@@ -210,6 +210,28 @@ describe("[R7] browser and server Purchase share one event_id", () => {
     assert.equal(calls[0][1], "Purchase"); assert.equal(server.event_name, "Purchase");
     assert.equal((calls[0][3] as { eventID: string }).eventID, orderId); assert.equal(server.event_id, orderId);
   });
+  test("[R7] browser Purchase carries the purchased product UUIDs, matching the server's content_ids", async () => {
+    const orderId = backend.createOrder({ total: 500, items: twoItems });
+    const calls = fakeWindow();
+    trackPurchase(orderId, 500, twoItems.map((i) => ({ id: i.product_id, name: "x", price: i.unit_price, quantity: i.quantity })));
+    await store.runMetaOutbox({ orderId });
+    const browser = calls[0][2] as { content_ids: string[]; content_type: string; value: number; currency: string };
+    const server = backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] };
+    assert.deepEqual(browser.content_ids, server.content_ids);
+    assert.equal(browser.content_type, "product"); assert.equal(browser.value, 500); assert.equal(browser.currency, "EGP");
+    assert.equal(browser.content_ids.includes(orderId), false, "the order id is never a content id");
+  });
+  test("[UUID] non-UUID ids (e.g. old SKUs) are never sent by the browser or the server", async () => {
+    const calls = fakeWindow();
+    trackViewContent({ id: "DRESS-001", name: "x", price: 5 });
+    trackAddToCart({ id: "SKU-ABCD1234", name: "x", price: 5, quantity: 1 });
+    trackPurchase("order-x", 5, [{ id: "BAG-7", name: "x", price: 5, quantity: 1 }]);
+    assert.equal(calls.filter((c) => c[1] === "ViewContent" || c[1] === "AddToCart").length, 0);
+    assert.equal("content_ids" in (calls.find((c) => c[1] === "Purchase")![2] as object), false);
+    const orderId = backend.createOrder({ total: 5, items: [{ product_id: "BAG-7", quantity: 1, unit_price: 5 }] });
+    const restore = quiet(); await store.runMetaOutbox({ orderId }); restore();
+    assert.equal("content_ids" in (backend.metaRequests[0].body.data[0].custom_data as object), false);
+  });
   test("[R7] the event_id is stable across retries", async () => {
     const orderId = backend.createOrder({ total: 500, items: twoItems });
     backend.metaReplies.push({ status: 500 });
@@ -224,14 +246,14 @@ describe("[R8] Purchase uses the saved order_items", () => {
     const orderId = backend.createOrder({ total: 540, items: twoItems });
     await store.runMetaOutbox({ orderId });
     const cd = backend.metaRequests[0].body.data[0].custom_data as Record<string, unknown>;
-    assert.deepEqual(cd.content_ids, ["DRESS-001", "BAG-7"]); assert.equal(cd.num_items, 3); assert.equal(cd.value, 540); assert.equal(cd.currency, "EGP");
+    assert.deepEqual(cd.content_ids, ["11111111-1111-4111-8111-111111111111", "22222222-2222-4222-8222-222222222222"]); assert.equal(cd.num_items, 3); assert.equal(cd.value, 540); assert.equal(cd.currency, "EGP");
     assert.ok(backend.requests.some((r) => r.url.includes("/rest/v1/order_items") && r.url.includes(`order_id=eq.${orderId}`)), "order_items read by order id");
   });
   test("[R8] later changes to the DB rows (not to any client data) change the payload", async () => {
     const orderId = backend.createOrder({ total: 540, items: twoItems });
-    backend.orderItems.find((i) => i.product_id === "BAG-7")!.product_id = "BAG-9";
+    backend.orderItems.find((i) => i.product_id === "22222222-2222-4222-8222-222222222222")!.product_id = "33333333-3333-4333-8333-333333333333";
     await store.runMetaOutbox({ orderId });
-    assert.deepEqual((backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] }).content_ids, ["DRESS-001", "BAG-9"]);
+    assert.deepEqual((backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] }).content_ids, ["11111111-1111-4111-8111-111111111111", "33333333-3333-4333-8333-333333333333"]);
   });
   test("[R8] the order route no longer reads items, prices or totals from the request for Meta", () => {
     const route = read("app/api/orders/route.ts");
@@ -264,8 +286,8 @@ describe("[R9] items without a product id are left out", () => {
 describe("[R10] invalid prices and totals are rejected", () => {
   test("[R10] browser: NaN / negative prices and totals send nothing", () => {
     const calls = fakeWindow(); const restore = quiet();
-    trackViewContent({ id: "A", name: "x", price: NaN }); trackAddToCart({ id: "A", name: "x", price: -1, quantity: 1 });
-    trackInitiateCheckout([{ id: "A", name: "x", price: Infinity, quantity: 1 }]);
+    trackViewContent({ id: "44444444-4444-4444-8444-444444444444", name: "x", price: NaN }); trackAddToCart({ id: "44444444-4444-4444-8444-444444444444", name: "x", price: -1, quantity: 1 });
+    trackInitiateCheckout([{ id: "44444444-4444-4444-8444-444444444444", name: "x", price: Infinity, quantity: 1 }]);
     trackPurchase("o1", NaN); trackPurchase("o2", -5);
     restore(); assert.equal(calls.length, 0);
   });
@@ -280,9 +302,9 @@ describe("[R10] invalid prices and totals are rejected", () => {
     assert.deepEqual(backend.outbox.map((r) => r.last_error), ["INVALID_VALUE", "INVALID_VALUE"]); assert.ok(a && b);
   });
   test("[R10] server: an item with an invalid unit_price is excluded from content_ids", async () => {
-    const orderId = backend.createOrder({ total: 300, items: [{ product_id: "GOOD", quantity: 1, unit_price: 100 }, { product_id: "BAD", quantity: 1, unit_price: -4 }] });
+    const orderId = backend.createOrder({ total: 300, items: [{ product_id: "55555555-5555-4555-8555-555555555555", quantity: 1, unit_price: 100 }, { product_id: "66666666-6666-4666-8666-666666666666", quantity: 1, unit_price: -4 }] });
     await store.runMetaOutbox({ orderId });
-    assert.deepEqual((backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] }).content_ids, ["GOOD"]);
+    assert.deepEqual((backend.metaRequests[0].body.data[0].custom_data as { content_ids: string[] }).content_ids, ["55555555-5555-4555-8555-555555555555"]);
   });
 });
 

@@ -1,5 +1,7 @@
 import { after, NextResponse } from "next/server";
-import { buildContext, isMetaConfigured, sendMetaEvent, type MetaEvent } from "@/lib/meta-capi";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { buildContext, isMetaConfigured, nameFields, sendMetaEvent, type MetaEvent } from "@/lib/meta-capi";
+import { isProductId } from "@/lib/meta-pixel";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ const num = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >=
 function cleanCustomData(raw: unknown): Record<string, unknown> {
   const input = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   const out: Record<string, unknown> = {};
-  const ids = Array.isArray(input.content_ids) ? input.content_ids.map((id) => str(id, 100)).filter((id): id is string => id !== null).slice(0, 50) : [];
+  const ids = Array.isArray(input.content_ids) ? input.content_ids.filter(isProductId).slice(0, 50) : [];
   if (ids.length) out.content_ids = ids;
   if (input.content_type === "product") out.content_type = "product";
   const name = str(input.content_name, 300);
@@ -32,7 +34,7 @@ function cleanCustomData(raw: unknown): Record<string, unknown> {
   if (Array.isArray(input.contents)) {
     const contents = input.contents.slice(0, 50).flatMap((c) => {
       const item = (c && typeof c === "object" ? c : {}) as Record<string, unknown>;
-      const id = str(item.id, 100); const quantity = num(item.quantity); const price = num(item.item_price);
+      const id = isProductId(item.id) ? item.id : null; const quantity = num(item.quantity); const price = num(item.item_price);
       return id && quantity !== null && price !== null ? [{ id, quantity: Math.floor(quantity), item_price: price }] : [];
     });
     if (contents.length) out.contents = contents;
@@ -51,9 +53,12 @@ export async function POST(request: Request) {
 
   const nowSec = Math.floor(Date.now() / 1000);
   const t = num(body.event_time);
+  // A signed-in customer's own details improve match quality; guests send only
+  // the request-derived fields (ip, user agent, fbp/fbc). All of it is hashed.
+  const user = await getCurrentUser().catch(() => null);
   const context = buildContext({
-    email: null,
-    userId: null,
+    email: user?.email ?? null,
+    userId: user?.id ?? null,
     clientIp: request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
     userAgent: request.headers.get("user-agent"),
     cookieHeader: request.headers.get("cookie"),
@@ -61,6 +66,9 @@ export async function POST(request: Request) {
   });
 
   const userData: Record<string, unknown> = {};
+  if (context.em) userData.em = [context.em];
+  if (context.external_id) userData.external_id = [context.external_id];
+  Object.assign(userData, nameFields(user?.full_name));
   if (context.client_ip) userData.client_ip_address = context.client_ip;
   if (context.client_user_agent) userData.client_user_agent = context.client_user_agent;
   if (context.fbp) userData.fbp = context.fbp;

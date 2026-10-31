@@ -8,7 +8,6 @@ export const LOW_STOCK_THRESHOLD = 5;
 export type AdminProduct = {
   id: string;
   name: string;
-  sku: string;
   description: string | null;
   category_id: string;
   category_name: string;
@@ -54,7 +53,6 @@ export type ProductListResult = {
 type ProductRow = {
   id: string;
   name: string;
-  sku: string;
   description: string | null;
   category_id: string;
   has_sizes: boolean | null;
@@ -81,7 +79,6 @@ function mapProductRow(row: ProductRow): AdminProduct {
   return {
     id: row.id,
     name: row.name,
-    sku: row.sku,
     description: row.description,
     category_id: row.category_id,
     has_sizes: Boolean(row.has_sizes),
@@ -100,7 +97,7 @@ function mapProductRow(row: ProductRow): AdminProduct {
   };
 }
 
-const PRODUCT_SELECT = "id, name, sku, description, category_id, has_sizes, purchase_price, selling_price, original_price, stock_quantity, image_url, images, videos, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
+const PRODUCT_SELECT = "id, name, description, category_id, has_sizes, purchase_price, selling_price, original_price, stock_quantity, image_url, images, videos, is_active, is_best_seller, best_seller_order, created_at, categories(name)";
 
 export async function getAdminProducts(supabase: SupabaseClient, params: ProductListParams = {}): Promise<ProductListResult> {
   const page = Math.max(1, params.page ?? 1);
@@ -125,7 +122,7 @@ export async function getAdminProducts(supabase: SupabaseClient, params: Product
 
   if (params.search) {
     const term = params.search.trim();
-    if (term) query = query.or(`name.ilike.%${term}%,sku.ilike.%${term}%`);
+    if (term) query = query.ilike("name", `%${term}%`);
   }
   if (params.categoryId) query = query.eq("category_id", params.categoryId);
   if (params.active === "active") query = query.eq("is_active", true);
@@ -201,7 +198,6 @@ export type ProductSupplierInput = { supplier_id: string; purchase_price: number
 
 export type ProductInput = {
   name: string;
-  sku: string;
   description: string;
   category_id: string;
   purchase_price: number;
@@ -353,7 +349,6 @@ export async function createProduct(supabase: SupabaseClient, input: ProductInpu
     .from("products")
     .insert({
       name: input.name,
-      sku: input.sku,
       description: input.description || null,
       category_id: input.category_id,
       purchase_price: input.purchase_price,
@@ -389,7 +384,6 @@ export async function updateProduct(supabase: SupabaseClient, id: string, input:
     .from("products")
     .update({
       name: input.name,
-      sku: input.sku,
       description: input.description || null,
       category_id: input.category_id,
       purchase_price: input.purchase_price,

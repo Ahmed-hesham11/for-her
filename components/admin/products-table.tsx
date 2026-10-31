@@ -17,7 +17,7 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
   }
 
   return (
-    <AdminTable headers={["الصورة", "المنتج", "الرمز", "الفئة", "سعر الشراء", "سعر البيع", "المخزون", "الحالة", ""]}>
+    <AdminTable headers={["الصورة", "المنتج", "الفئة", "سعر الشراء", "سعر البيع", "المخزون", "الحالة", ""]}>
       {products.map((product) => (
         <tr key={product.id} onClick={() => router.push(`/admin/products/${product.id}`)} className="cursor-pointer transition hover:bg-[#faf6f3]">
           <td className="px-4 py-3">
@@ -27,7 +27,6 @@ export function ProductsTable({ products }: { products: AdminProduct[] }) {
             </div>
           </td>
           <td className="px-4 py-3 font-medium text-[#221d1b]">{product.name}</td>
-          <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{product.sku}</td>
           <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.category_name}</td>
           <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{formatEgp(product.purchase_price)}</td>
           <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">{formatEgp(product.selling_price)}</td>

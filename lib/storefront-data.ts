@@ -26,7 +26,6 @@ export type Product = {
   image: string;
   category: string;
   description: string;
-  sku: string;
   stock: number;
   // Extra photos and videos — only populated on the product detail page.
   gallery?: string[];

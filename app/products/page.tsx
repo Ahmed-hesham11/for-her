@@ -58,8 +58,7 @@ export default async function ProductsPage({
   if (searchTerm) {
     filtered = filtered.filter((product) =>
       product.name.toLowerCase().includes(searchTerm) ||
-      product.description.toLowerCase().includes(searchTerm) ||
-      product.sku.toLowerCase().includes(searchTerm),
+      product.description.toLowerCase().includes(searchTerm),
     );
   }
   const sorted = sortProducts(filtered, sort);

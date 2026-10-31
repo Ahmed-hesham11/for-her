@@ -1,3 +1,4 @@
+import { isProductId } from "@/lib/meta-pixel";
 import { buildUserData, type MetaEvent, type MetaSendResult, type OutboxContext } from "@/lib/meta-capi";
 
 // Delivery logic for the meta_event_outbox table (see the 20261031 migration).
@@ -52,11 +53,11 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 // never from the send time; value and items come from the saved order.
 export function buildPurchaseEvent(row: OutboxRow, order: OrderSnapshot, fallbackSourceUrl: string | null, nowMs: number): MetaEvent {
   const items = order.items.filter((item) => Number.isInteger(item.quantity) && item.quantity > 0);
-  // Item IDs are product ids. Items without one are left out of content_ids.
-  const withSku = items.flatMap((item) => {
+  // Item IDs are product UUIDs (the catalog item id). Anything else is left out of content_ids.
+  const withId = items.flatMap((item) => {
     const id = item.product_id?.trim();
     const price = Number(item.unit_price);
-    return id && Number.isFinite(price) && price >= 0 ? [{ id, quantity: item.quantity, price }] : [];
+    return isProductId(id) && Number.isFinite(price) && price >= 0 ? [{ id, quantity: item.quantity, price }] : [];
   });
   const sourceUrl = row.context?.source_url ?? fallbackSourceUrl;
 
@@ -73,10 +74,10 @@ export function buildPurchaseEvent(row: OutboxRow, order: OrderSnapshot, fallbac
       value: round2(order.total_amount),
       content_type: "product",
       num_items: items.reduce((sum, item) => sum + item.quantity, 0),
-      ...(withSku.length > 0
+      ...(withId.length > 0
         ? {
-            content_ids: withSku.map((item) => item.id),
-            contents: withSku.map((item) => ({ id: item.id, quantity: item.quantity, item_price: item.price })),
+            content_ids: withId.map((item) => item.id),
+            contents: withId.map((item) => ({ id: item.id, quantity: item.quantity, item_price: item.price })),
           }
         : {}),
     },
@@ -125,8 +126,8 @@ export async function processOutbox(options: {
         record(await store.markFailed(row, "INVALID_VALUE"), "failed");
         continue;
       }
-      if (order.items.some((item) => !item.product_id?.trim())) {
-        console.warn("[meta-outbox] order has item(s) without a product id; excluded from content_ids:", row.order_id);
+      if (order.items.some((item) => !isProductId(item.product_id?.trim()))) {
+        console.warn("[meta-outbox] order has item(s) without a valid product UUID; excluded from content_ids:", row.order_id);
       }
 
       const result = await send(buildPurchaseEvent(row, order, fallbackSourceUrl, now()));

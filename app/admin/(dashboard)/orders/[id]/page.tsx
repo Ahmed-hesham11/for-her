@@ -60,7 +60,6 @@ export default async function AdminOrderDetailPage({
               <thead>
                 <tr className="border-b border-[#eadfd7] bg-[#f7f1ee] text-[0.68rem] uppercase tracking-[0.1em] text-[#8a7c78]">
                   <th className="px-4 py-3 font-medium">المنتج</th>
-                  <th className="px-4 py-3 font-medium">الرمز</th>
                   <th className="px-4 py-3 font-medium">الكمية</th>
                   <th className="px-4 py-3 font-medium">سعر الوحدة</th>
                   <th className="px-4 py-3 font-medium">الإجمالي</th>
@@ -89,7 +88,6 @@ export default async function AdminOrderDetailPage({
                         </div>
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{item.sku ?? "—"}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{item.quantity}</td>
                     <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{formatEgp(item.unit_price)}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">{formatEgp(item.total_price)}</td>

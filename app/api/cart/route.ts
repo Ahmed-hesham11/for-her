@@ -48,7 +48,7 @@ async function loadCartItems(cartId: string) {
   const sizeIds = [...new Set(cartItems.map((row) => row.size_id as string | null).filter((id): id is string => Boolean(id)))];
 
   const [{ data: products }, { data: colors }, { data: sizes }] = await Promise.all([
-    supabaseAdmin.from("products").select("id, name, sku, selling_price, image_url").in("id", productIds),
+    supabaseAdmin.from("products").select("id, name, selling_price, image_url").in("id", productIds),
     colorIds.length > 0 ? supabaseAdmin.from("product_colors").select("id, name, image_url").in("id", colorIds) : Promise.resolve({ data: [] }),
     sizeIds.length > 0 ? supabaseAdmin.from("product_sizes").select("id, label").in("id", sizeIds) : Promise.resolve({ data: [] }),
   ]);
@@ -67,7 +67,6 @@ async function loadCartItems(cartId: string) {
       return {
         lineId: String(row.id),
         id: String(product.id),
-        sku: String(product.sku ?? ""),
         name: String(product.name),
         // Always the live price from the products table — never client-supplied.
         price: Number(product.selling_price ?? 0),

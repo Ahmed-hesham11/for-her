@@ -32,7 +32,6 @@ export default async function EditProductPage({
       <div>
         <p className="text-[0.7rem] uppercase tracking-[0.22em] text-[#8a7c78]">الكتالوج</p>
         <h1 className="brand-serif text-[2.6rem] leading-none text-[#1d1918]">{product.name}</h1>
-        <p className="mt-1 text-sm text-[#8a7c78]">رمز المنتج: {product.sku}</p>
       </div>
 
       <ProductForm
@@ -42,7 +41,6 @@ export default async function EditProductPage({
         currentStock={product.stock_quantity}
         initialProduct={{
           name: product.name,
-          sku: product.sku,
           description: product.description ?? "",
           category_id: product.category_id,
           purchase_price: product.purchase_price,

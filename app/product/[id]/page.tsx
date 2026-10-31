@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ProductDetailClient } from "@/components/product-detail-client";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
+import { getAvailability } from "@/lib/availability";
 import { absoluteUrl, SITE_NAME } from "@/lib/site";
 import { getProductById, getRelatedProducts } from "@/lib/storefront-data-server";
 
@@ -46,7 +47,8 @@ export default async function ProductDetailPage({
             "@type": "Product",
             name: product.name,
             description: product.description || undefined,
-            sku: product.sku || undefined,
+            // The product UUID doubles as the Meta catalog item id.
+            productID: product.id,
             image: [product.image, ...(product.gallery ?? [])].map(absoluteUrl),
             category: product.category,
             brand: { "@type": "Brand", name: SITE_NAME },
@@ -54,8 +56,8 @@ export default async function ProductDetailPage({
               "@type": "Offer",
               priceCurrency: "EGP",
               price: product.price,
-              // The store takes orders regardless of stock, so products always read as available.
-              availability: "https://schema.org/InStock",
+              // Order Anytime: every active product is orderable, so it reads as InStock regardless of stock level.
+              availability: getAvailability(true).schema,
               url: absoluteUrl(`/product/${product.id}`),
             },
           }).replace(/</g, "\\u003c"),

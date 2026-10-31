@@ -45,7 +45,6 @@ function InventoryRow({ product }: { product: AdminProduct }) {
         </div>
       </td>
       <td className="px-4 py-3 font-medium text-[#221d1b]">{product.name}</td>
-      <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{product.sku}</td>
       <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.category_name}</td>
       <td className="whitespace-nowrap px-4 py-3">
         <span
@@ -93,7 +92,7 @@ export function InventoryTable({ products }: { products: AdminProduct[] }) {
   }
 
   return (
-    <AdminTable headers={["الصورة", "المنتج", "الرمز", "الفئة", "الحالة", "الكمية الفعلية"]}>
+    <AdminTable headers={["الصورة", "المنتج", "الفئة", "الحالة", "الكمية الفعلية"]}>
       {products.map((product) => (
         <InventoryRow key={product.id} product={product} />
       ))}

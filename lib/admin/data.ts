@@ -38,14 +38,12 @@ export type OrderStatusCount = { status: OrderStatus; count: number };
 export type LowStockProduct = {
   id: string;
   name: string;
-  sku: string;
   stock_quantity: number;
 };
 
 export type TopSellingProduct = {
   product_id: string;
   product_name: string;
-  sku: string | null;
   units_sold: number;
   revenue: number;
 };
@@ -159,7 +157,7 @@ export async function getLowStockProducts(supabase: SupabaseClient, limit = 8, e
 export async function getTopSellingProducts(supabase: SupabaseClient, limit = 5, errors?: string[]): Promise<TopSellingProduct[]> {
   const { data, error } = await supabase.rpc("admin_top_selling_products", { limit_count: limit });
   trackError(errors, "Top selling products", error);
-  return ((data ?? []) as { product_id: string; product_name: string; sku: string | null; units_sold: number; revenue: number }[]).map((row) => ({
+  return ((data ?? []) as { product_id: string; product_name: string; units_sold: number; revenue: number }[]).map((row) => ({
     ...row,
     units_sold: Number(row.units_sold),
     revenue: Number(row.revenue),
