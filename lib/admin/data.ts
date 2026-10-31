@@ -168,6 +168,30 @@ function isoDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+// Sum of every order ever placed except cancelled ones. Paged because
+// PostgREST caps a single response (1000 rows by default).
+async function getAllTimeRevenue(supabase: SupabaseClient, errors?: string[]): Promise<number> {
+  const pageSize = 1000;
+  let total = 0;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("total_amount")
+      .neq("status", "cancelled")
+      .order("created_at", { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    trackError(errors, "All-time revenue", error);
+    if (error || !data) break;
+
+    total += data.reduce((sum, row) => sum + Number(row.total_amount), 0);
+    if (data.length < pageSize) break;
+  }
+
+  return Math.round(total * 100) / 100;
+}
+
 // Mirrors admin_revenue_profit_by_range's own defaults (today, and 13 days
 // before it) so "no filter applied" looks identical to the old fixed
 // 14-day chart.
@@ -183,8 +207,9 @@ export async function getDashboardOverview(supabase: SupabaseClient, range?: { f
   const defaults = defaultRange();
   const resolvedRange = { from: range?.from || defaults.from, to: range?.to || defaults.to };
 
-  const [kpis, revenueSummary, revenueProfitByDay, recentOrders, orderStatusCounts, lowStockProducts, topSellingProducts] = await Promise.all([
+  const [kpis, allTimeRevenue, revenueSummary, revenueProfitByDay, recentOrders, orderStatusCounts, lowStockProducts, topSellingProducts] = await Promise.all([
     getAdminKpis(supabase, errors),
+    getAllTimeRevenue(supabase, errors),
     getRevenueSummary(supabase, errors),
     getRevenueProfitByRange(supabase, resolvedRange.from, resolvedRange.to, errors),
     getRecentOrders(supabase, 8, errors),
@@ -204,7 +229,7 @@ export async function getDashboardOverview(supabase: SupabaseClient, range?: { f
   );
 
   return {
-    kpis: { ...kpis, totalRevenue: revenueSummary.last30Days },
+    kpis: { ...kpis, totalRevenue: allTimeRevenue },
     revenueSummary,
     revenueProfitByDay,
     rangeTotals,

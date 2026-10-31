@@ -57,7 +57,7 @@ export default async function AdminDashboardPage({
       ) : null}
 
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        <KpiCard label="إجمالي الإيرادات (30 يومًا)" value={formatEgp(kpis.totalRevenue)} icon={<ReceiptIcon className="h-4 w-4" />} />
+        <KpiCard label="إجمالي الإيرادات" value={formatEgp(kpis.totalRevenue)} icon={<ReceiptIcon className="h-4 w-4" />} />
         <KpiCard label="إجمالي الطلبات" value={String(kpis.totalOrders)} icon={<ReceiptIcon className="h-4 w-4" />} />
         <KpiCard label="إجمالي العملاء" value={String(kpis.totalCustomers)} icon={<UsersIcon className="h-4 w-4" />} />
         <KpiCard label="إجمالي المنتجات" value={String(kpis.totalProducts)} icon={<BoxIcon className="h-4 w-4" />} />

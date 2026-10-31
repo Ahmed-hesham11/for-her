@@ -51,7 +51,7 @@ export default async function AdminPurchaseDetailPage({
                 {items.map((item) => (
                   <tr key={item.id}>
                     <td className="px-4 py-3 font-medium text-[#221d1b]">
-                      <Link href={`/admin/products/${item.product_id}?from=/admin/purchases/${purchase.id}`} className="underline-offset-4 hover:text-[#8a3f34] hover:underline">
+                      <Link href={`/admin/products/${item.product_id}/details?from=/admin/purchases/${purchase.id}`} className="underline-offset-4 hover:text-[#8a3f34] hover:underline">
                         {item.product_name}
                       </Link>
                     </td>

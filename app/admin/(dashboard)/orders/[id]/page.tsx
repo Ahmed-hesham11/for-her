@@ -78,7 +78,7 @@ export default async function AdminOrderDetailPage({
                         </div>
                         <div className="min-w-0">
                           {item.product_id ? (
-                            <Link href={`/admin/products/${item.product_id}?from=/admin/orders/${order.id}`} className="font-medium text-[#221d1b] underline-offset-4 hover:text-[#8a3f34] hover:underline">
+                            <Link href={`/admin/products/${item.product_id}/details?from=/admin/orders/${order.id}`} className="font-medium text-[#221d1b] underline-offset-4 hover:text-[#8a3f34] hover:underline">
                               {item.product_name}
                             </Link>
                           ) : (
