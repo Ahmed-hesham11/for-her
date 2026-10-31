@@ -7,7 +7,13 @@
 // inlined at BUILD time, so changing it requires a rebuild.
 export const META_PIXEL_ID = process.env.NEXT_PUBLIC_META_PIXEL_ID ?? "1584150296802427";
 
-const CURRENCY = "EGP";
+// ISO 4217 code, sent verbatim by the pixel and the Conversions API alike.
+export const META_CURRENCY = "EGP";
+const CURRENCY = META_CURRENCY;
+
+// Monetary amounts are always plain numbers rounded to 2 decimals (never
+// formatted strings), so the pixel and the server copy carry the same value.
+export const metaValue = (amount: number) => Math.round(Number(amount) * 100) / 100;
 
 type Fbq = (command: string, ...args: unknown[]) => void;
 
@@ -124,7 +130,9 @@ export function trackInitiateCheckout(allItems: PixelItem[]) {
 // remembered in localStorage. `value` must be the server-confirmed order total;
 // `items` are the purchased products (id = product UUID) so content_ids match
 // the catalog. The server copy is NOT sent from here: it comes from the outbox.
-export function trackPurchase(orderId: string, value: number, items: PixelItem[] = []) {
+export function trackPurchase(orderId: string, total: number, items: PixelItem[] = []) {
+  // Number() also accepts a numeric string such as "230.00" from the API.
+  const value = metaValue(total);
   if (!Number.isFinite(value) || value < 0) return;
   const storageKey = `meta_purchase_${orderId}`;
   try {

@@ -1,4 +1,4 @@
-import { isProductId } from "@/lib/meta-pixel";
+import { isProductId, META_CURRENCY, metaValue } from "@/lib/meta-pixel";
 import { buildUserData, type MetaEvent, type MetaSendResult, type OutboxContext } from "@/lib/meta-capi";
 
 // Delivery logic for the meta_event_outbox table (see the 20261031 migration).
@@ -46,8 +46,6 @@ export function backoffSeconds(attempt: number) {
   return BACKOFF_SECONDS[Math.min(Math.max(attempt, 1), BACKOFF_SECONDS.length) - 1];
 }
 
-const round2 = (n: number) => Math.round(n * 100) / 100;
-
 // Deterministic: the same row + saved order always yields the same payload.
 // event_id and event_time come from the outbox row (order id / orders.created_at),
 // never from the send time; value and items come from the saved order.
@@ -70,8 +68,8 @@ export function buildPurchaseEvent(row: OutboxRow, order: OrderSnapshot, fallbac
     ...(sourceUrl ? { event_source_url: sourceUrl } : {}),
     user_data: buildUserData(order, row.context),
     custom_data: {
-      currency: "EGP",
-      value: round2(order.total_amount),
+      currency: META_CURRENCY,
+      value: metaValue(order.total_amount),
       content_type: "product",
       num_items: items.reduce((sum, item) => sum + item.quantity, 0),
       ...(withId.length > 0

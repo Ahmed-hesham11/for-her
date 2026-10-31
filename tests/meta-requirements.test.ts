@@ -241,6 +241,48 @@ describe("[R7] browser and server Purchase share one event_id", () => {
   });
 });
 
+describe("[CURRENCY] Purchase value and currency are identical in browser and server", () => {
+  test("[CURRENCY] 230 EGP order: exact string 'EGP', numeric value, same on both sides", async () => {
+    const items = [{ product_id: "11111111-1111-4111-8111-111111111111", quantity: 1, unit_price: 230 }];
+    const orderId = backend.createOrder({ total: 230, items });
+    const calls = fakeWindow();
+    trackPurchase(orderId, 230, items.map((i) => ({ id: i.product_id, name: "x", price: i.unit_price, quantity: i.quantity })));
+    await store.runMetaOutbox({ orderId });
+
+    const browser = calls[0][2] as { value: unknown; currency: unknown };
+    const request = backend.metaRequests[0];
+    const server = request.body.data[0].custom_data as { value: unknown; currency: unknown };
+
+    if (process.env.SHOW_META_PAYLOAD) {
+      console.log("BROWSER fbq call:\n" + JSON.stringify(calls[0], null, 2));
+      console.log(`SERVER POST ${request.url.replace(/\/\/.*@/, "//")}\n` + JSON.stringify({ ...request.body, access_token: "[redacted]" }, null, 2));
+    }
+
+    for (const side of [browser, server]) {
+      assert.strictEqual(side.currency, "EGP");
+      assert.match(side.currency as string, /^[A-Z]{3}$/);
+      assert.strictEqual(typeof side.value, "number");
+      assert.strictEqual(side.value, 230);
+    }
+    assert.deepEqual(browser.currency, server.currency); assert.deepEqual(browser.value, server.value);
+    assert.equal((calls[0][3] as { eventID: string }).eventID, request.body.data[0].event_id);
+    assert.ok(new Intl.NumberFormat("en", { style: "currency", currency: browser.currency as string }).format(230), "Intl accepts the code");
+  });
+  test("[CURRENCY] fractional and string totals are normalised to the same number on both sides", async () => {
+    const calls = fakeWindow();
+    trackPurchase("o-1", 230.004); trackPurchase("o-2", "230.00" as unknown as number);
+    assert.strictEqual((calls[0][2] as { value: number }).value, 230); assert.strictEqual((calls[1][2] as { value: number }).value, 230);
+    const orderId = backend.createOrder({ total: 230.004, items: twoItems });
+    await store.runMetaOutbox({ orderId });
+    assert.strictEqual((backend.metaRequests[0].body.data[0].custom_data as { value: number }).value, 230);
+  });
+  test("[CURRENCY] the price display formatter shows 'EGP 230.00' with no dollar sign", async () => {
+    const { formatEgp } = await import("../lib/currency");
+    const shown = formatEgp(230).replace(/\s/g, " ");
+    assert.equal(shown, "EGP 230.00"); assert.equal(shown.includes("$"), false);
+  });
+});
+
 describe("[R8] Purchase uses the saved order_items", () => {
   test("[R8] content_ids, num_items and value come from the database rows", async () => {
     const orderId = backend.createOrder({ total: 540, items: twoItems });

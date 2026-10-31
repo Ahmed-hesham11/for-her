@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { buildContext, isMetaConfigured, nameFields, sendMetaEvent, type MetaEvent } from "@/lib/meta-capi";
-import { isProductId } from "@/lib/meta-pixel";
+import { isProductId, META_CURRENCY } from "@/lib/meta-pixel";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // same event_id to the pixel, so Meta de-duplicates the pair. Purchase is NOT
 // accepted here: it goes through the order outbox.
 const ALLOWED = new Set(["PageView", "ViewContent", "Search", "AddToCart", "InitiateCheckout", "AddToWishlist", "CompleteRegistration"]);
-const CURRENCY = "EGP";
+const CURRENCY = META_CURRENCY;
 
 type Body = { event_name?: unknown; event_id?: unknown; event_time?: unknown; source_url?: unknown; custom_data?: unknown };
 
