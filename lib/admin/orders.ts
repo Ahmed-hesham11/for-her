@@ -167,21 +167,26 @@ export async function getAdminOrderById(supabase: SupabaseClient, id: string): P
 
   const { data: items } = await supabase
     .from("order_items")
-    .select("id, product_id, product_name, quantity, unit_price, total_price, image_url, color_name, size_name, products(image_url)")
+    .select("id, product_id, product_name, quantity, unit_price, total_price, image_url, color_name, size_name, products(image_url), product_colors(image_url, images)")
     .eq("order_id", id)
     .order("created_at", { ascending: true });
 
+  type Joined<T> = T | T[] | null;
   type ItemRow = Omit<AdminOrderItem, "image_url"> & {
     image_url: string | null;
-    products: { image_url: string | null } | { image_url: string | null }[] | null;
+    products: Joined<{ image_url: string | null }>;
+    product_colors: Joined<{ image_url: string | null; images: string[] | null }>;
   };
+  const first = <T,>(value: Joined<T>) => (Array.isArray(value) ? (value[0] ?? null) : value);
 
-  // A custom line's own image_url (set at order time, since there's no
-  // products row to join) wins; a catalog line always has a null image_url
-  // of its own, so it falls back to the joined product's current image.
-  const mappedItems = ((items ?? []) as unknown as ItemRow[]).map((item) => {
-    const product = Array.isArray(item.products) ? (item.products[0] ?? null) : item.products;
-    return { ...item, image_url: item.image_url ?? product?.image_url ?? null };
+  // The picture the customer actually chose: the image stored on the line
+  // when the order was placed (the color's image, or a custom line's own),
+  // then the chosen color's current image, and only then the product's main
+  // image. `||` rather than `??` so an empty-string image also falls through.
+  const mappedItems = ((items ?? []) as unknown as ItemRow[]).map(({ products, product_colors, ...item }) => {
+    const color = first(product_colors);
+    const image = item.image_url || color?.image_url || color?.images?.[0] || first(products)?.image_url || null;
+    return { ...item, image_url: image };
   });
 
   // Older rows created before the request_id column existed may still carry
