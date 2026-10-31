@@ -15,8 +15,6 @@ export function LowStockTable({ products }: { products: LowStockProduct[] }) {
   return (
     <AdminTable headers={["المنتج", "المخزون الحالي", "الحالة"]}>
       {products.map((product) => {
-        const isOutOfStock = product.stock_quantity <= 0;
-
         return (
           <tr
             key={product.id}
@@ -27,11 +25,9 @@ export function LowStockTable({ products }: { products: LowStockProduct[] }) {
             <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{product.stock_quantity}</td>
             <td className="whitespace-nowrap px-4 py-3">
               <span
-                className={`inline-flex items-center rounded-full px-3 py-1 text-[0.7rem] font-medium ${
-                  isOutOfStock ? "bg-[#f6dcd6] text-[#8a3f34]" : "bg-[#f6e6c8] text-[#7a5b1e]"
-                }`}
+                className="inline-flex items-center rounded-full bg-[#f6e6c8] px-3 py-1 text-[0.7rem] font-medium text-[#7a5b1e]"
               >
-                {isOutOfStock ? "نفد المخزون" : "مخزون منخفض"}
+                مخزون منخفض
               </span>
             </td>
           </tr>

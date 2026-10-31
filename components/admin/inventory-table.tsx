@@ -19,8 +19,8 @@ function InventoryRow({ product }: { product: AdminProduct }) {
   const isValid = value.trim() !== "" && Number.isInteger(quantity) && quantity >= 0;
   const isDirty = isValid && quantity !== product.stock_quantity;
 
-  const isOut = product.stock_quantity <= 0;
-  const isLow = !isOut && product.stock_quantity <= 5;
+  // Ordering never stops at zero stock, so 0 reads as "available", not "out".
+  const isLow = product.stock_quantity > 0 && product.stock_quantity <= 5;
 
   const handleSave = async () => {
     if (!isDirty || isSaving) return;
@@ -49,10 +49,10 @@ function InventoryRow({ product }: { product: AdminProduct }) {
       <td className="whitespace-nowrap px-4 py-3">
         <span
           className={`inline-flex items-center rounded-full px-3 py-1 text-[0.7rem] font-medium ${
-            isOut ? "bg-[#f6dcd6] text-[#8a3f34]" : isLow ? "bg-[#f6e6c8] text-[#7a5b1e]" : "bg-[#dcefe1] text-[#296b45]"
+            isLow ? "bg-[#f6e6c8] text-[#7a5b1e]" : "bg-[#dcefe1] text-[#296b45]"
           }`}
         >
-          {isOut ? "نفد المخزون" : isLow ? "مخزون منخفض" : "متوفر"}
+          {isLow ? "مخزون منخفض" : "متوفر"}
         </span>
       </td>
       <td className="px-4 py-3">
