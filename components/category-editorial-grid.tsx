@@ -17,7 +17,7 @@ export function CategoryEditorialGrid({ categories, allCategories }: { categorie
   const hasChildren = (categoryId: string) => allCategories.some((item) => item.parentId === categoryId);
 
   return (
-    <StaggerReveal className="grid grid-flow-dense grid-cols-2 gap-4 sm:grid-cols-3 md:gap-5 lg:grid-cols-4 auto-rows-[190px] sm:auto-rows-[220px] lg:auto-rows-[240px]">
+    <StaggerReveal className="grid grid-flow-dense grid-cols-2 gap-3 sm:grid-cols-3 md:gap-4 lg:grid-cols-4 auto-rows-[130px] sm:auto-rows-[150px] lg:auto-rows-[165px]">
       {categories.map((category) => {
         const isFeatured = hasChildren(category.id);
 
@@ -39,7 +39,7 @@ export function CategoryEditorialGrid({ categories, allCategories }: { categorie
               {isFeatured ? (
                 <span className="mb-2 inline-block rounded-full bg-white/15 px-3 py-1 text-[0.6rem] font-semibold uppercase tracking-[0.14em] text-white backdrop-blur-sm">{t.categoryGrid.shopByStyle}</span>
               ) : null}
-              <h2 className={`brand-serif leading-none text-white ${isFeatured ? "text-[2.4rem] sm:text-[3rem]" : "text-[1.4rem] sm:text-[1.7rem]"}`}>
+              <h2 className={`brand-serif leading-none text-white ${isFeatured ? "text-[1.9rem] sm:text-[2.3rem]" : "text-[1.1rem] sm:text-[1.3rem]"}`}>
                 {category.name}
               </h2>
               <span className={`mt-2 inline-flex items-center gap-1.5 font-semibold uppercase tracking-[0.14em] text-white/85 transition-colors duration-300 group-hover:text-white ${isFeatured ? "text-[0.68rem]" : "text-[0.6rem]"}`}>
