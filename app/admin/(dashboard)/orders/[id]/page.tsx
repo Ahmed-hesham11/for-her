@@ -55,7 +55,39 @@ export default async function AdminOrderDetailPage({
 
       <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
         <DashboardSection title="المنتجات">
-          <div className="overflow-x-auto rounded-[16px] border border-[#eadfd7]">
+          <ul className="divide-y divide-[#eadfd7] rounded-[16px] border border-[#eadfd7] sm:hidden">
+            {items.map((item) => (
+              <li key={item.id} className="flex gap-3 p-3">
+                <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[10px] bg-[#f1e7e0]">
+                  {item.image_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element -- product images can come from any host, not just the allow-listed next/image hosts.
+                    <img src={item.image_url} alt={item.product_name} className="h-full w-full object-cover" />
+                  ) : null}
+                </div>
+                <div className="min-w-0 flex-1 space-y-1 text-sm">
+                  {item.product_id ? (
+                    <Link href={`/admin/products/${item.product_id}/details?from=/admin/orders/${order.id}`} className="block font-medium text-[#221d1b] hover:text-[#8a3f34]">
+                      {item.product_name}
+                    </Link>
+                  ) : (
+                    <span className="block font-medium text-[#221d1b]">{item.product_name}</span>
+                  )}
+                  {item.color_name || item.size_name ? (
+                    <span className="block text-xs text-[#8a7c78]">
+                      {item.color_name ? `اللون: ${item.color_name}` : ""}
+                      {item.color_name && item.size_name ? " · " : ""}
+                      {item.size_name ? `المقاس: ${item.size_name}` : ""}
+                    </span>
+                  ) : null}
+                  <div className="flex items-center justify-between text-[#4a4442]">
+                    <span>{item.quantity} × {formatEgp(item.unit_price)}</span>
+                    <span className="font-semibold text-[#221d1b]">{formatEgp(item.total_price)}</span>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden overflow-x-auto rounded-[16px] border border-[#eadfd7] sm:block">
             <table className="w-full min-w-[480px] border-collapse text-right text-sm">
               <thead>
                 <tr className="border-b border-[#eadfd7] bg-[#f7f1ee] text-[0.68rem] uppercase tracking-[0.1em] text-[#8a7c78]">
