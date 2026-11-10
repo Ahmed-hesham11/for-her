@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export type AdminCategory = {
   id: string;
@@ -26,7 +27,7 @@ export type CategoryOption = { id: string; name: string };
 export async function getAdminCategories(supabase: SupabaseClient): Promise<{ categories: AdminCategory[]; error: string | null }> {
   const [{ data: categories, error: categoriesError }, { data: products, error: productsError }] = await Promise.all([
     supabase.from("categories").select("id, name, image_url, is_active, created_at, parent_id, sort_order, show_on_home").order("sort_order", { ascending: true }).order("name", { ascending: true }),
-    supabase.from("products").select("category_id"),
+    fetchAllRows<{ category_id: string }>((from, to) => supabase.from("products").select("category_id").order("id", { ascending: true }).range(from, to)),
   ]);
 
   if (categoriesError) return { categories: [], error: categoriesError.message };

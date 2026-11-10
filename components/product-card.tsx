@@ -37,7 +37,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
   const discountPercent = isOnOffer ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100) : 0;
 
   return (
-    <article className={`group min-w-0 ${className ?? ""}`} style={style}>
+    <article className={`group flex min-w-0 flex-col ${className ?? ""}`} style={style}>
       <div className="relative aspect-[4/5] overflow-hidden bg-[#eee5de]">
         <Link href={`/product/${product.id}`} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8f2ee]">
           {imageFailed ? (
@@ -67,7 +67,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
           </span>
         ) : null}
       </div>
-      <div className="pt-4">
+      <div className="flex flex-1 flex-col pt-4">
         <Link href={`/product/${product.id}`} className="block focus-visible:outline-none focus-visible:underline">
           <h3 className="truncate text-[0.95rem] font-medium tracking-[0.01em] text-[#2b201d] transition-colors duration-300 group-hover:text-[#a06f5c] md:text-[1.05rem]">{product.name}</h3>
         </Link>
@@ -95,7 +95,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
             ) : null}
           </div>
         ) : null}
-        <div className="mt-2 flex flex-col items-stretch gap-2.5">
+        <div className="mt-auto flex flex-col items-stretch gap-2.5 pt-2">
           <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className={`text-[0.98rem] font-semibold md:text-[1.05rem] ${isOnOffer ? "text-[#9c4a37]" : "text-[#1f1b1a]"}`}>{formatEgp(product.price)}</span>
             {isOnOffer ? <span className="text-[0.85rem] font-medium text-[#8b7b76] line-through decoration-[#8b7b76]/70 decoration-2">{formatEgp(product.originalPrice)}</span> : null}

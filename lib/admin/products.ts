@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeForPostgrest } from "@/lib/search";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 // Single global threshold for "low stock" everywhere in the admin — not a
 // per-product setting. Keep in sync with the hardcoded value in the
@@ -175,8 +176,8 @@ export async function getSupplierOptions(supabase: SupabaseClient): Promise<Prod
 }
 
 export async function getProductOptions(supabase: SupabaseClient): Promise<ProductOption[]> {
-  const { data } = await supabase.from("products").select("id, name").order("name", { ascending: true });
-  return (data ?? []) as ProductOption[];
+  const { data } = await fetchAllRows<ProductOption>((from, to) => supabase.from("products").select("id, name").order("name", { ascending: true }).order("id", { ascending: true }).range(from, to));
+  return data ?? [];
 }
 
 export type ProductPricedOption = { id: string; name: string; selling_price: number; stock_quantity: number; image_url: string | null };
@@ -187,12 +188,16 @@ export type ProductPricedOption = { id: string; name: string; selling_price: num
 // since the admin may know real stock exists even when the recorded count
 // hasn't caught up yet.
 export async function getActiveProductOptions(supabase: SupabaseClient): Promise<ProductPricedOption[]> {
-  const { data } = await supabase
-    .from("products")
-    .select("id, name, selling_price, stock_quantity, image_url")
-    .eq("is_active", true)
-    .order("name", { ascending: true });
-  return ((data ?? []) as { id: string; name: string; selling_price: number; stock_quantity: number; image_url: string | null }[]).map((row) => ({
+  const { data } = await fetchAllRows<{ id: string; name: string; selling_price: number; stock_quantity: number; image_url: string | null }>((from, to) =>
+    supabase
+      .from("products")
+      .select("id, name, selling_price, stock_quantity, image_url")
+      .eq("is_active", true)
+      .order("name", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, to),
+  );
+  return (data ?? []).map((row) => ({
     ...row,
     selling_price: Number(row.selling_price),
     stock_quantity: Number(row.stock_quantity),

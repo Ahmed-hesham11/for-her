@@ -1,3 +1,4 @@
+import { fetchAllRows } from "@/lib/supabase-paging";
 import { createClient } from "@supabase/supabase-js";
 import type { Category, Product, ProductColor } from "@/lib/storefront-data";
 
@@ -132,10 +133,13 @@ async function fetchCatalog(): Promise<Product[]> {
   const startedAt = performance.now();
   if (!supabase) return [];
 
+  const client = supabase;
   const [{ data: productRows, error: productsError }, categories] = await Promise.all([
-    // No page-facing cap — /products paginates client-side over the full
-    // active catalog. 1000 is only a sanity ceiling against a runaway query.
-    supabase.from("products").select(PRODUCT_FIELDS).eq("is_active", true).order("created_at", { ascending: false }).limit(1000),
+    // The whole active catalog: a single query is silently capped at 1000
+    // rows, which hid every product past the newest 1000.
+    fetchAllRows((from, to) =>
+      client.from("products").select(PRODUCT_FIELDS).eq("is_active", true).order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to),
+    ),
     getCategories(),
   ]);
 

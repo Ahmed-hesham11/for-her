@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sanitizeForPostgrest } from "@/lib/search";
+import { fetchAllRows } from "@/lib/supabase-paging";
 
 export const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled"] as const;
 export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
@@ -81,12 +82,16 @@ export async function getAdminOrders(supabase: SupabaseClient, params: OrderList
 
   let categoryOrderIds: string[] | null = null;
   if (params.categoryId) {
-    const { data, error } = await supabase
-      .from("order_items")
-      .select("order_id, products!inner(category_id)")
-      .eq("products.category_id", params.categoryId);
+    const { data, error } = await fetchAllRows<{ order_id: string }>((from, to) =>
+      supabase
+        .from("order_items")
+        .select("order_id, products!inner(category_id)")
+        .eq("products.category_id", params.categoryId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
     if (error) return { orders: [], total: 0, page, pageSize, error: error.message };
-    categoryOrderIds = [...new Set(((data ?? []) as { order_id: string }[]).map((row) => row.order_id))];
+    categoryOrderIds = [...new Set((data ?? []).map((row) => row.order_id))];
     if (categoryOrderIds.length === 0) {
       return { orders: [], total: 0, page, pageSize, error: null };
     }
