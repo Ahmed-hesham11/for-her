@@ -52,7 +52,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
               src={displayImage}
               alt={product.name}
               onError={() => setFailedImage(displayImage)}
-              className="h-full w-full object-contain sm:object-cover transition-transform duration-[700ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
+              className="h-full w-full object-cover object-top transition-transform duration-[700ms] ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:scale-105"
             />
           )}
         </Link>
@@ -95,15 +95,15 @@ export function ProductCard({ product, style, className }: { product: Product; s
             ) : null}
           </div>
         ) : null}
-        <div className="mt-2 flex flex-col items-stretch gap-3 min-[390px]:flex-row min-[390px]:items-center min-[390px]:justify-between">
-          <div className="flex items-center gap-2">
+        <div className="mt-2 flex flex-col items-stretch gap-2.5">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
             <span className={`text-[0.98rem] font-semibold md:text-[1.05rem] ${isOnOffer ? "text-[#9c4a37]" : "text-[#1f1b1a]"}`}>{formatEgp(product.price)}</span>
             {isOnOffer ? <span className="text-[0.85rem] font-medium text-[#8b7b76] line-through decoration-[#8b7b76]/70 decoration-2">{formatEgp(product.originalPrice)}</span> : null}
           </div>
           {needsOptions ? (
             <Link
               href={`/product/${product.id}`}
-              className="flex min-h-11 items-center justify-center rounded-full border border-[#221d1b] bg-[#1d1a19] px-3 py-2 text-center text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-[#fffaf7] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 min-[390px]:min-h-0 md:px-3.5 md:text-[0.63rem]"
+              className="flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full border border-[#221d1b] bg-[#1d1a19] px-3 text-center text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#fffaf7] transition-all duration-300 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 md:text-[0.68rem]"
             >
               {t.productCard.selectOptions}
             </Link>
@@ -112,7 +112,7 @@ export function ProductCard({ product, style, className }: { product: Product; s
               type="button"
               onClick={() => void runAdd(() => addToCart(product, 1, selectedColor ? { colorId: selectedColor.id, colorName: selectedColor.name, image: selectedColor.image } : undefined))}
               disabled={addStatus === "adding"}
-              className={`min-h-11 rounded-full border ${addStatus === "added" ? "border-[#4f7a5a] bg-[#4f7a5a]" : "border-[#221d1b] bg-[#1d1a19]"} px-3 py-2 text-[0.58rem] font-semibold uppercase tracking-[0.1em] text-[#fffaf7] transition-all duration-300 hover:-translate-y-0.5 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 active:translate-y-0 min-[390px]:min-h-0 md:px-3.5 md:text-[0.63rem]`}
+              className={`flex h-10 w-full items-center justify-center whitespace-nowrap rounded-full border ${addStatus === "added" ? "border-[#4f7a5a] bg-[#4f7a5a]" : "border-[#221d1b] bg-[#1d1a19]"} px-3 text-[0.62rem] font-semibold uppercase tracking-[0.08em] text-[#fffaf7] transition-all duration-300 hover:border-[#a06f5c] hover:bg-[#a06f5c] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 disabled:opacity-70 md:text-[0.68rem]`}
             >
               {addStatus === "added" ? `✓ ${t.common.addedToCart}` : addStatus === "adding" ? t.common.addingToCart : t.common.addToCart}
             </button>

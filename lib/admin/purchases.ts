@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeForPostgrest } from "@/lib/search";
 
 export const PURCHASE_STATUSES = ["pending", "received", "cancelled"] as const;
 
@@ -46,13 +47,27 @@ const PURCHASE_SELECT = "id, supplier_id, purchase_number, purchase_date, total_
 
 export async function getAdminPurchases(
   supabase: SupabaseClient,
-  params: { status?: string; page?: number; pageSize?: number } = {},
+  params: { status?: string; search?: string; page?: number; pageSize?: number } = {},
 ): Promise<{ purchases: AdminPurchaseListItem[]; total: number; page: number; pageSize: number; error: string | null }> {
   const page = Math.max(1, params.page ?? 1);
   const pageSize = params.pageSize ?? 20;
 
   let query = supabase.from("purchases").select(PURCHASE_SELECT, { count: "exact" });
   if (params.status) query = query.eq("status", params.status);
+
+  // Search by supplier name or purchase number.
+  const term = sanitizeForPostgrest(params.search ?? "");
+  if (term) {
+    const { data: matchedSuppliers, error: supplierError } = await supabase.from("suppliers").select("id").ilike("name", `%${term}%`).limit(200);
+    if (supplierError) return { purchases: [], total: 0, page, pageSize, error: supplierError.message };
+    const conditions: string[] = [];
+    const supplierIds = ((matchedSuppliers ?? []) as { id: string }[]).map((row) => row.id);
+    if (supplierIds.length > 0) conditions.push(`supplier_id.in.(${supplierIds.join(",")})`);
+    const numeric = Number(term);
+    if (Number.isInteger(numeric)) conditions.push(`purchase_number.eq.${numeric}`);
+    if (conditions.length === 0) return { purchases: [], total: 0, page, pageSize, error: null };
+    query = query.or(conditions.join(","));
+  }
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;

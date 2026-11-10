@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useLiveSearch } from "@/components/use-live-search";
 import { ORDER_STATUSES, PAYMENT_STATUSES } from "@/lib/admin/orders";
 import type { CategoryTreeOption } from "@/lib/admin/products";
 import { ORDER_STATUS_LABELS_AR, PAYMENT_STATUS_LABELS_AR } from "@/lib/admin/status-labels-ar";
@@ -19,7 +19,7 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const { value: search, setValue: setSearch, flush } = useLiveSearch();
   const from = searchParams.get("from") ?? "";
   const to = searchParams.get("to") ?? "";
   const today = todayIso();
@@ -38,7 +38,7 @@ export function OrderFilters({ categories }: { categories: CategoryTreeOption[] 
         className="min-w-0 sm:min-w-[200px] sm:flex-1"
         onSubmit={(event) => {
           event.preventDefault();
-          updateParam("search", search);
+          flush();
         }}
       >
         <input

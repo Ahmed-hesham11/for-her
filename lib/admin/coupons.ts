@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeForPostgrest } from "@/lib/search";
 
 export type AdminCoupon = {
   id: string;
@@ -36,7 +37,7 @@ export async function getAdminCoupons(supabase: SupabaseClient, search?: string)
   let query = supabase.from("coupons").select("id, code, discount_type, discount_value, min_order_amount, max_uses, used_count, expires_at, is_active, created_at").order("created_at", { ascending: false });
 
   if (search?.trim()) {
-    query = query.ilike("code", `%${search.trim()}%`);
+    query = query.ilike("code", `%${sanitizeForPostgrest(search)}%`);
   }
 
   const { data, error } = await query;

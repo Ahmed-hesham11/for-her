@@ -9,6 +9,7 @@ import { getCategories, getProducts } from "@/lib/storefront-data-server";
 import { ProductCard } from "@/components/product-card";
 import { MetaSearchTracker } from "@/components/meta-search-tracker";
 import { ProductFiltersBar, type SortValue } from "@/components/product-filters-bar";
+import { matchesSearch } from "@/lib/search";
 import { productMatchesNames, resolveCategoryProductNames, type Product } from "@/lib/storefront-data";
 
 const PAGE_SIZE = 12;
@@ -57,8 +58,7 @@ export default async function ProductsPage({
   }
   if (searchTerm) {
     filtered = filtered.filter((product) =>
-      product.name.toLowerCase().includes(searchTerm) ||
-      product.description.toLowerCase().includes(searchTerm),
+      matchesSearch(searchTerm, product.name, product.description, product.category),
     );
   }
   const sorted = sortProducts(filtered, sort);

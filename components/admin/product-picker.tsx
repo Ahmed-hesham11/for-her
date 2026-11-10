@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import type { ProductPricedOption } from "@/lib/admin/products";
 import { formatEgp } from "@/lib/currency";
 
@@ -9,13 +10,18 @@ import { formatEgp } from "@/lib/currency";
 // dropdown can show the product's thumbnail, not just its name.
 export function ProductPicker({ products, value, onChange }: { products: ProductPricedOption[]; value: string; onChange: (id: string) => void }) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const selected = products.find((product) => product.id === value) ?? null;
+  const visibleProducts = products.filter((product) => matchesSearch(query, product.name));
 
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) setOpen(false);
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setOpen(false);
+        setQuery("");
+      }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -25,7 +31,10 @@ export function ProductPicker({ products, value, onChange }: { products: Product
     <div ref={containerRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen((current) => !current)}
+        onClick={() => {
+          setOpen((current) => !current);
+          setQuery("");
+        }}
         className="flex w-full items-center gap-2 rounded-full border border-[#e4d4cd] bg-white px-3 py-2 text-sm outline-none focus:border-[#c8a78f]"
       >
         <span className="h-7 w-7 shrink-0 overflow-hidden rounded-[6px] bg-[#f1e7e0]">
@@ -39,14 +48,26 @@ export function ProductPicker({ products, value, onChange }: { products: Product
       </button>
 
       {open ? (
-        <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-[14px] border border-[#e4d4cd] bg-white shadow-[0_12px_30px_rgba(64,39,31,0.12)]">
-          {products.map((product) => (
+        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-[14px] border border-[#e4d4cd] bg-white shadow-[0_12px_30px_rgba(64,39,31,0.12)]">
+          <div className="sticky top-0 border-b border-[#f0e5df] bg-white p-2">
+            <input
+              type="search"
+              autoFocus
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="ابحث عن منتج..."
+              className="w-full rounded-full border border-[#e4d4cd] bg-white px-3 py-1.5 text-sm outline-none placeholder:text-[#a89690] focus:border-[#c8a78f]"
+            />
+          </div>
+          {visibleProducts.length === 0 ? <p className="px-3 py-4 text-center text-sm text-[#8a7c78]">لا توجد نتائج</p> : null}
+          {visibleProducts.map((product) => (
             <button
               key={product.id}
               type="button"
               onClick={() => {
                 onChange(product.id);
                 setOpen(false);
+                setQuery("");
               }}
               className={`flex w-full items-center gap-2 px-3 py-2 text-right text-sm transition hover:bg-[#f7f1ee] ${product.id === value ? "bg-[#f2e7df]" : ""}`}
             >

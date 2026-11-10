@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useLiveSearch } from "@/components/use-live-search";
 import { SearchIcon } from "@/components/icons";
 import { useLocale } from "@/components/locale-provider";
 
@@ -16,7 +16,7 @@ export function ProductFiltersBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { t } = useLocale();
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const { value: search, setValue: setSearch, flush } = useLiveSearch();
 
   const sortLabels: Record<SortValue, string> = {
     newest: t.filtersBar.sortNewest,
@@ -40,7 +40,7 @@ export function ProductFiltersBar() {
         className="relative"
         onSubmit={(event) => {
           event.preventDefault();
-          updateParam("search", search);
+          flush();
         }}
       >
         <SearchIcon className="pointer-events-none absolute start-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9b8881]" />

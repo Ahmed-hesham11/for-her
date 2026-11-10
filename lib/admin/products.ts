@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeForPostgrest } from "@/lib/search";
 
 // Single global threshold for "low stock" everywhere in the admin — not a
 // per-product setting. Keep in sync with the hardcoded value in the
@@ -121,7 +122,7 @@ export async function getAdminProducts(supabase: SupabaseClient, params: Product
   let query = supabase.from("products").select(PRODUCT_SELECT, { count: "exact" });
 
   if (params.search) {
-    const term = params.search.trim();
+    const term = sanitizeForPostgrest(params.search);
     if (term) query = query.ilike("name", `%${term}%`);
   }
   if (params.categoryId) query = query.eq("category_id", params.categoryId);
@@ -145,6 +146,16 @@ export async function getAdminProducts(supabase: SupabaseClient, params: Product
     pageSize,
     error: null,
   };
+}
+
+// Header counts for the products page: the storefront only lists active
+// products, so the admin total (which includes inactive ones) can look larger.
+export async function getAdminProductCounts(supabase: SupabaseClient): Promise<{ active: number; inactive: number }> {
+  const [active, inactive] = await Promise.all([
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true),
+    supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", false),
+  ]);
+  return { active: active.count ?? 0, inactive: inactive.count ?? 0 };
 }
 
 export async function getAdminProductById(supabase: SupabaseClient, id: string): Promise<AdminProduct | null> {

@@ -1,4 +1,3 @@
-import { unstable_cache } from "next/cache";
 import { createClient } from "@supabase/supabase-js";
 import type { Category, Product, ProductColor } from "@/lib/storefront-data";
 
@@ -129,61 +128,53 @@ const BASE_PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url,
 // the per-color extra images are fetched on the detail page alone.
 const PRODUCT_FIELDS = `${BASE_PRODUCT_FIELDS}, product_colors(id, name, image_url, sort_order)`;
 
-const getCachedCatalog = unstable_cache(
-  async (): Promise<Product[]> => {
-    const startedAt = performance.now();
-    if (!supabase) return [];
+async function fetchCatalog(): Promise<Product[]> {
+  const startedAt = performance.now();
+  if (!supabase) return [];
 
-    const [{ data: productRows, error: productsError }, categories] = await Promise.all([
-      // No page-facing cap — /products paginates client-side over the full
-      // active catalog. 1000 is only a sanity ceiling against a runaway query.
-      supabase.from("products").select(PRODUCT_FIELDS).eq("is_active", true).order("created_at", { ascending: false }).limit(1000),
-      getCategories(),
-    ]);
+  const [{ data: productRows, error: productsError }, categories] = await Promise.all([
+    // No page-facing cap — /products paginates client-side over the full
+    // active catalog. 1000 is only a sanity ceiling against a runaway query.
+    supabase.from("products").select(PRODUCT_FIELDS).eq("is_active", true).order("created_at", { ascending: false }).limit(1000),
+    getCategories(),
+  ]);
 
-    if (productsError || !productRows) return [];
+  if (productsError || !productRows) return [];
 
-    const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
-    const products = productRows.map((item) => mapProductRow(item, categoryNames));
+  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+  const products = productRows.map((item) => mapProductRow(item, categoryNames));
 
-    if (process.env.NODE_ENV !== "production") console.debug(`[perf] catalog fetch: ${(performance.now() - startedAt).toFixed(0)}ms (${products.length} products)`);
-    return products;
-  },
-  ["storefront-catalog"],
-  { revalidate: 60 },
-);
-
-export async function getProducts() {
-  return getCachedCatalog();
+  if (process.env.NODE_ENV !== "production") console.debug(`[perf] catalog fetch: ${(performance.now() - startedAt).toFixed(0)}ms (${products.length} products)`);
+  return products;
 }
 
-const getCachedBestSellers = unstable_cache(
-  async (limit: number): Promise<Product[]> => {
-    if (!supabase) return [];
+export async function getProducts() {
+  return fetchCatalog();
+}
 
-    const [{ data: productRows, error }, categories] = await Promise.all([
-      supabase
-        .from("products")
-        .select(PRODUCT_FIELDS)
-        .eq("is_active", true)
-        .eq("is_best_seller", true)
-        .order("best_seller_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: false })
-        .limit(limit),
-      getCategories(),
-    ]);
+async function fetchBestSellers(limit: number): Promise<Product[]> {
+  if (!supabase) return [];
 
-    if (error || !productRows) return [];
+  const [{ data: productRows, error }, categories] = await Promise.all([
+    supabase
+      .from("products")
+      .select(PRODUCT_FIELDS)
+      .eq("is_active", true)
+      .eq("is_best_seller", true)
+      .order("best_seller_order", { ascending: true, nullsFirst: false })
+      .order("created_at", { ascending: false })
+      .limit(limit),
+    getCategories(),
+  ]);
 
-    const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
-    return productRows.map((item) => mapProductRow(item, categoryNames));
-  },
-  ["storefront-best-sellers"],
-  { revalidate: 60 },
-);
+  if (error || !productRows) return [];
+
+  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+  return productRows.map((item) => mapProductRow(item, categoryNames));
+}
 
 export async function getBestSellers(limit = 5) {
-  return getCachedBestSellers(limit);
+  return fetchBestSellers(limit);
 }
 
 // Targeted single-product lookup — avoids fetching the (capped) general

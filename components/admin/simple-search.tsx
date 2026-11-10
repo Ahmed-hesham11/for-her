@@ -1,24 +1,16 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { useLiveSearch } from "@/components/use-live-search";
 
 export function SimpleSearch({ placeholder }: { placeholder: string }) {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const [search, setSearch] = useState(searchParams.get("search") ?? "");
+  const { value: search, setValue: setSearch, flush } = useLiveSearch();
 
   return (
     <form
       className="max-w-[360px]"
       onSubmit={(event) => {
         event.preventDefault();
-        const params = new URLSearchParams(searchParams.toString());
-        if (search) params.set("search", search);
-        else params.delete("search");
-        params.delete("page");
-        router.push(`${pathname}?${params.toString()}`);
+        flush();
       }}
     >
       <input

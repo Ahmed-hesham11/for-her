@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeForPostgrest } from "@/lib/search";
 
 export type AdminSupplier = {
   id: string;
@@ -24,7 +25,7 @@ export async function getAdminSuppliers(supabase: SupabaseClient, search?: strin
   let query = supabase.from("suppliers").select("id, name, phone, email, address, notes, is_active, created_at").order("name", { ascending: true });
 
   if (search?.trim()) {
-    query = query.ilike("name", `%${search.trim()}%`);
+    query = query.ilike("name", `%${sanitizeForPostgrest(search)}%`);
   }
 
   const { data, error } = await query;

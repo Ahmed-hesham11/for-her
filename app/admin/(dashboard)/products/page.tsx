@@ -4,7 +4,7 @@ import { ErrorState } from "@/components/admin/empty-state";
 import { Pagination } from "@/components/admin/pagination";
 import { ProductFilters } from "@/components/admin/product-filters";
 import { ProductsTable } from "@/components/admin/products-table";
-import { getAdminProducts, getCategoryOptions, type ActiveFilter, type StockFilter } from "@/lib/admin/products";
+import { getAdminProductCounts, getAdminProducts, getCategoryOptions, type ActiveFilter, type StockFilter } from "@/lib/admin/products";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 const SORT_MAP: Record<string, { sortBy: "created_at" | "name" | "selling_price" | "stock_quantity"; sortDir: "asc" | "desc" }> = {
@@ -30,8 +30,9 @@ export default async function AdminProductsPage({
   const sort = SORT_MAP[params.sort ?? "newest"] ?? SORT_MAP.newest;
   const page = Math.max(1, Number(params.page) || 1);
 
-  const [categories, result] = await Promise.all([
+  const [categories, counts, result] = await Promise.all([
     getCategoryOptions(supabase),
+    getAdminProductCounts(supabase),
     getAdminProducts(supabase, {
       search: params.search,
       categoryId: params.category,
@@ -67,6 +68,9 @@ export default async function AdminProductsPage({
         <ErrorState message={`تعذّر تحميل المنتجات: ${result.error}`} />
       ) : (
         <DashboardSection title={`${result.total} منتج`}>
+          <p className="mb-3 text-sm text-[#756763]">
+            {counts.active} نشط (ظاهر في الموقع) · {counts.inactive} غير نشط (مخفي عن العملاء)
+          </p>
           <ProductsTable products={result.products} />
           <Pagination page={result.page} pageSize={result.pageSize} total={result.total} basePath="/admin/products" searchParams={params} />
         </DashboardSection>

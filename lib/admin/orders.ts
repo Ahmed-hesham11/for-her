@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { sanitizeForPostgrest } from "@/lib/search";
 
 export const ORDER_STATUSES = ["pending", "processing", "shipped", "delivered", "cancelled"] as const;
 export const PAYMENT_STATUSES = ["pending", "paid", "failed", "refunded"] as const;
@@ -96,7 +97,8 @@ export async function getAdminOrders(supabase: SupabaseClient, params: OrderList
   if (categoryOrderIds) query = query.in("id", categoryOrderIds);
 
   if (params.search) {
-    const term = params.search.trim();
+    // Order numbers are displayed as "#1001", so accept the leading "#" too.
+    const term = sanitizeForPostgrest(params.search.replace(/^\s*#/, ""));
     if (term) {
       const numeric = Number(term);
       if (Number.isInteger(numeric)) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DashboardSection } from "@/components/admin/dashboard-section";
 import { ErrorState } from "@/components/admin/empty-state";
+import { SimpleSearch } from "@/components/admin/simple-search";
 import { Pagination } from "@/components/admin/pagination";
 import { PurchasesTable } from "@/components/admin/purchases-table";
 import { PURCHASE_STATUS_LABELS_AR } from "@/lib/admin/status-labels-ar";
@@ -20,7 +21,15 @@ export default async function AdminPurchasesPage({
   }
 
   const page = Math.max(1, Number(params.page) || 1);
-  const result = await getAdminPurchases(supabase, { status: params.status, page, pageSize: 20 });
+  const result = await getAdminPurchases(supabase, { status: params.status, search: params.search, page, pageSize: 20 });
+
+  const statusHref = (status?: string) => {
+    const query = new URLSearchParams();
+    if (params.search) query.set("search", params.search);
+    if (status) query.set("status", status);
+    const qs = query.toString();
+    return qs ? `/admin/purchases?${qs}` : "/admin/purchases";
+  };
 
   return (
     <div className="space-y-6">
@@ -37,20 +46,23 @@ export default async function AdminPurchasesPage({
         </Link>
       </div>
 
-      <DashboardSection title="تصفية حسب الحالة">
+      <DashboardSection title="بحث وتصفية">
+        <div className="space-y-3">
+        <SimpleSearch placeholder="ابحث باسم المورد أو رقم الشراء..." />
         <div className="flex flex-wrap gap-2">
-          <Link href="/admin/purchases" className={`rounded-full border px-4 py-2 text-[0.68rem] tracking-[0.08em] ${!params.status ? "border-[#1d1a19] bg-[#1d1a19] text-white" : "border-[#e4d4cd] text-[#4a4442] hover:bg-[#f2e7df]"}`}>
+          <Link href={statusHref()} className={`rounded-full border px-4 py-2 text-[0.68rem] tracking-[0.08em] ${!params.status ? "border-[#1d1a19] bg-[#1d1a19] text-white" : "border-[#e4d4cd] text-[#4a4442] hover:bg-[#f2e7df]"}`}>
             الكل
           </Link>
           {PURCHASE_STATUSES.map((status) => (
             <Link
               key={status}
-              href={`/admin/purchases?status=${status}`}
+              href={statusHref(status)}
               className={`rounded-full border px-4 py-2 text-[0.68rem] tracking-[0.08em] ${params.status === status ? "border-[#1d1a19] bg-[#1d1a19] text-white" : "border-[#e4d4cd] text-[#4a4442] hover:bg-[#f2e7df]"}`}
             >
               {PURCHASE_STATUS_LABELS_AR[status] ?? status}
             </Link>
           ))}
+        </div>
         </div>
       </DashboardSection>
 

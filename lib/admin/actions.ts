@@ -17,6 +17,7 @@
 // log reads as a sentence instead of a bare uuid.
 
 import { unlink } from "node:fs/promises";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdmin, requireSuperAdmin } from "@/lib/admin/auth";
 import { logAdminAction } from "@/lib/admin/audit";
 import { createCategory, reorderCategories, updateCategory, type CategoryInput } from "@/lib/admin/categories";
@@ -37,6 +38,13 @@ import { createSupplier, updateSupplier, type SupplierInput } from "@/lib/admin/
 import { setUserRole } from "@/lib/admin/users";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { resolveUploadPath } from "@/lib/uploads";
+
+// The storefront caches its catalog for 60s; drop that cache right after an
+// admin change so the shop and the admin panel never disagree.
+function refreshStorefront() {
+  revalidateTag("storefront-catalog");
+  revalidatePath("/", "layout");
+}
 
 function requireClient() {
   if (!supabaseAdmin) throw new Error("Server is not configured.");
@@ -67,6 +75,8 @@ export async function setActiveAction(table: string, id: string, isActive: boole
     });
   }
 
+  if (!error) refreshStorefront();
+
   return { error: error?.message ?? null };
 }
 
@@ -85,6 +95,8 @@ export async function setProductActiveAction(id: string, isActive: boolean) {
     });
   }
 
+  if (!result.error) refreshStorefront();
+
   return result;
 }
 
@@ -102,6 +114,8 @@ export async function setProductStockAction(id: string, quantity: number) {
       summary: `عدّل مخزون المنتج "${(row as { name?: string } | null)?.name ?? id}" إلى ${quantity}`,
     });
   }
+
+  if (!result.error) refreshStorefront();
 
   return result;
 }
@@ -152,6 +166,8 @@ export async function createProductAction(input: ProductInput) {
     });
   }
 
+  if (!result.error) refreshStorefront();
+
   return result;
 }
 
@@ -168,6 +184,8 @@ export async function updateProductAction(id: string, input: ProductInput) {
       summary: `عدّل المنتج "${input.name}"`,
     });
   }
+
+  if (!result.error) refreshStorefront();
 
   return result;
 }
@@ -186,6 +204,8 @@ export async function createCategoryAction(input: CategoryInput) {
     });
   }
 
+  if (!result.error) refreshStorefront();
+
   return result;
 }
 
@@ -202,6 +222,8 @@ export async function updateCategoryAction(id: string, input: CategoryInput) {
       summary: `عدّل الفئة "${input.name}"`,
     });
   }
+
+  if (!result.error) refreshStorefront();
 
   return result;
 }
@@ -221,6 +243,8 @@ export async function reorderCategoriesAction(orderedIds: string[]) {
       summary: "غيّر ترتيب الفئات",
     });
   }
+
+  if (!result.error) refreshStorefront();
 
   return result;
 }
@@ -325,6 +349,8 @@ export async function createPurchaseAction(input: { supplier_id: string; purchas
       summary: `سجّل عملية شراء من "${(supplier as { name?: string } | null)?.name ?? input.supplier_id}" بعدد ${input.items.length} صنف`,
     });
   }
+
+  if (!result.error) refreshStorefront();
 
   return result;
 }
@@ -435,6 +461,8 @@ export async function createManualOrderAction(input: ManualOrderInput) {
       summary: `أنشأ طلبًا يدويًا للعميل "${input.customer_name}"`,
     });
   }
+
+  if (!result.error) refreshStorefront();
 
   return result;
 }
