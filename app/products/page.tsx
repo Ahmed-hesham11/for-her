@@ -5,12 +5,12 @@ import { SiteHeader } from "@/components/site-header";
 import { CategorySidebar } from "@/components/category-sidebar";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
-import { getCategories, getProducts } from "@/lib/storefront-data-server";
+import { getCategories, getProducts, getProductsPage } from "@/lib/storefront-data-server";
 import { ProductCard } from "@/components/product-card";
 import { MetaSearchTracker } from "@/components/meta-search-tracker";
 import { ProductFiltersBar, type SortValue } from "@/components/product-filters-bar";
 import { matchesSearch } from "@/lib/search";
-import { productMatchesNames, resolveCategoryProductNames, type Product } from "@/lib/storefront-data";
+import { productMatchesNames, resolveCategoryProductIds, resolveCategoryProductNames, type Product } from "@/lib/storefront-data";
 
 const PAGE_SIZE = 12;
 
@@ -37,10 +37,12 @@ export default async function ProductsPage({
   const t = getDictionary(await getLocale());
   const params = await searchParams;
   const startedAt = performance.now();
-  const [categories, allProducts] = await Promise.all([getCategories(), getProducts()]);
+  const searchTerm = params.search?.trim().toLowerCase() ?? "";
+  // Browsing (no search) loads just the current page from the database. Search
+  // needs Arabic-aware matching, so it scans the full active catalog instead.
+  const [categories, allProducts] = await Promise.all([getCategories(), searchTerm ? getProducts() : Promise.resolve<Product[]>([])]);
   if (process.env.NODE_ENV !== "production") console.debug(`[perf] route render /products: ${(performance.now() - startedAt).toFixed(0)}ms`);
 
-  const searchTerm = params.search?.trim().toLowerCase() ?? "";
   const categorySlug = params.category ?? "";
   const subcategorySlug = params.subcategory ?? "";
   const sort: SortValue = ["price_asc", "price_desc", "name_asc", "newest"].includes(params.sort ?? "")
@@ -50,22 +52,35 @@ export default async function ProductsPage({
 
   const activeCategory = categorySlug ? categories.find((category) => category.slug === categorySlug) : undefined;
   const activeSubcategory = subcategorySlug ? categories.find((category) => category.slug === subcategorySlug) : undefined;
-  const matchNames = resolveCategoryProductNames(categories, categorySlug, subcategorySlug);
+  let totalCount: number;
+  let safePage: number;
+  let pageProducts: Product[];
 
-  let filtered = allProducts;
-  if (matchNames) {
-    filtered = filtered.filter((product) => productMatchesNames(product, matchNames));
-  }
   if (searchTerm) {
+    const matchNames = resolveCategoryProductNames(categories, categorySlug, subcategorySlug);
+    let filtered = allProducts;
+    if (matchNames) {
+      filtered = filtered.filter((product) => productMatchesNames(product, matchNames));
+    }
     filtered = filtered.filter((product) =>
       matchesSearch(searchTerm, product.name, product.description, product.category),
     );
+    const sorted = sortProducts(filtered, sort);
+    totalCount = sorted.length;
+    safePage = Math.min(page, Math.max(1, Math.ceil(totalCount / PAGE_SIZE)));
+    pageProducts = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  } else {
+    const result = await getProductsPage({
+      categoryIds: resolveCategoryProductIds(categories, categorySlug, subcategorySlug),
+      sort,
+      page,
+      pageSize: PAGE_SIZE,
+    });
+    totalCount = result.total;
+    safePage = result.page;
+    pageProducts = result.products;
   }
-  const sorted = sortProducts(filtered, sort);
-
-  const pageCount = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, pageCount);
-  const pageProducts = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+  const pageCount = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   function pageHref(targetPage: number) {
     const query = new URLSearchParams();
@@ -101,7 +116,7 @@ export default async function ProductsPage({
             </div>
 
             <MetaSearchTracker term={searchTerm} />
-            {sorted.length === 0 ? (
+            {totalCount === 0 ? (
               <div className="mt-10 border border-[#e6d9d2] bg-[#fffdfb] px-6 py-16 text-center md:px-10">
                 <p className="text-[0.68rem] font-semibold uppercase tracking-[0.24em] text-[#a06f5c]">{t.productsPage.noProductsEyebrow}</p>
                 <h2 className="mt-3 brand-serif text-[2.4rem] leading-none text-[#29201d]">{t.productsPage.noProductsTitle}</h2>
@@ -113,7 +128,7 @@ export default async function ProductsPage({
             ) : (
               <>
                 <div className="mt-8 flex items-center justify-between text-[0.68rem] uppercase tracking-[0.16em] text-[#887873]">
-                  <span>{sorted.length} {sorted.length === 1 ? t.productsPage.piece : t.productsPage.pieces}</span>
+                  <span>{totalCount} {totalCount === 1 ? t.productsPage.piece : t.productsPage.pieces}</span>
                   {activeSubcategory ? (
                     <span className="text-[#a06f5c]">{activeSubcategory.name}</span>
                   ) : activeCategory ? (

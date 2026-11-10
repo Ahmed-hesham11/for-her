@@ -152,6 +152,45 @@ async function fetchCatalog(): Promise<Product[]> {
   return products;
 }
 
+export type CatalogSort = "newest" | "price_asc" | "price_desc" | "name_asc";
+
+// One page of the active catalog, filtered/sorted/paginated in the database so
+// browsing pages only ever loads `pageSize` products instead of all of them.
+export async function getProductsPage(options: { categoryIds: string[] | null; sort: CatalogSort; page: number; pageSize: number }): Promise<{ products: Product[]; total: number; page: number }> {
+  if (!supabase || options.categoryIds?.length === 0) return { products: [], total: 0, page: 1 };
+  const client = supabase;
+
+  const run = (page: number) => {
+    let query = client.from("products").select(PRODUCT_FIELDS, { count: "exact" }).eq("is_active", true);
+    if (options.categoryIds) query = query.in("category_id", options.categoryIds);
+    if (options.sort === "price_asc") query = query.order("selling_price", { ascending: true });
+    else if (options.sort === "price_desc") query = query.order("selling_price", { ascending: false });
+    else if (options.sort === "name_asc") query = query.order("name", { ascending: true });
+    else query = query.order("created_at", { ascending: false });
+    const from = (page - 1) * options.pageSize;
+    return query.order("id", { ascending: true }).range(from, from + options.pageSize - 1);
+  };
+
+  const [first, categories] = await Promise.all([run(options.page), getCategories()]);
+  let { data, error, count } = first;
+  let page = options.page;
+
+  // Asked for a page past the end (PostgREST errors on an out-of-range
+  // offset): find the real size from page 1 and serve the last page instead.
+  if ((error || (data ?? []).length === 0) && page > 1) {
+    const firstPage = await run(1);
+    if (firstPage.error) return { products: [], total: 0, page: 1 };
+    count = firstPage.count;
+    page = Math.max(1, Math.ceil((count ?? 0) / options.pageSize));
+    ({ data, error } = page === 1 ? firstPage : await run(page));
+  }
+  if (error) return { products: [], total: 0, page: 1 };
+  const total = count ?? 0;
+
+  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+  return { products: (data ?? []).map((item) => mapProductRow(item, categoryNames)), total, page };
+}
+
 export async function getProducts() {
   return fetchCatalog();
 }

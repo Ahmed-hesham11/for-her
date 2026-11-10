@@ -57,6 +57,22 @@ export function resolveCategoryProductNames(categories: Category[], categorySlug
   return children.length > 0 ? children.map((item) => item.name) : [category.name];
 }
 
+// Same resolution as resolveCategoryProductNames, but by category id — used to
+// filter in the database. Returns null for "no filter".
+export function resolveCategoryProductIds(categories: Category[], categorySlug: string, subcategorySlug: string): string[] | null {
+  if (!categorySlug) return null;
+  const category = categories.find((item) => item.slug === categorySlug);
+  if (!category) return null;
+
+  if (subcategorySlug) {
+    const subcategory = categories.find((item) => item.slug === subcategorySlug && item.parentId === category.id);
+    return [(subcategory ?? category).id];
+  }
+
+  const children = categories.filter((item) => item.parentId === category.id);
+  return [category.id, ...children.map((item) => item.id)];
+}
+
 export function productMatchesNames(product: Product, names: string[] | null): boolean {
   if (!names) return true;
   return names.some((name) => name.toLowerCase() === product.category.toLowerCase());
