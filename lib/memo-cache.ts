@@ -7,11 +7,17 @@
 type Entry = { value: Promise<unknown>; expires: number };
 
 const store = new Map<string, Entry>();
+const MAX_ENTRIES = 500; // keys include search/page/product ids, so bound the memory
 
 export function memo<T>(key: string, ttlMs: number, load: () => Promise<T>): Promise<T> {
   const now = Date.now();
   const hit = store.get(key);
   if (hit && hit.expires > now) return hit.value as Promise<T>;
+
+  if (store.size >= MAX_ENTRIES) {
+    for (const [k, e] of store) if (e.expires <= now) store.delete(k);
+    if (store.size >= MAX_ENTRIES) store.delete(store.keys().next().value as string);
+  }
 
   const value = load().then(
     (result) => {

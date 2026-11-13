@@ -163,7 +163,11 @@ export type CatalogSort = "newest" | "price_asc" | "price_desc" | "name_asc";
 
 // One page of the active catalog, filtered/sorted/paginated in the database so
 // browsing pages only ever loads `pageSize` products instead of all of them.
-export async function getProductsPage(options: { categoryIds: string[] | null; sort: CatalogSort; page: number; pageSize: number }): Promise<{ products: Product[]; total: number; page: number }> {
+export function getProductsPage(options: { categoryIds: string[] | null; sort: CatalogSort; page: number; pageSize: number }): Promise<{ products: Product[]; total: number; page: number }> {
+  return memo(`page:${JSON.stringify(options)}`, 3 * 60_000, () => fetchProductsPage(options));
+}
+
+async function fetchProductsPage(options: { categoryIds: string[] | null; sort: CatalogSort; page: number; pageSize: number }): Promise<{ products: Product[]; total: number; page: number }> {
   if (!supabase || options.categoryIds?.length === 0) return { products: [], total: 0, page: 1 };
   const client = supabase;
 
@@ -255,7 +259,11 @@ export async function getBestSellers(limit = 5) {
 
 // Targeted single-product lookup — avoids fetching the (capped) general
 // catalog just to find one product by id.
-export async function getProductById(id: string): Promise<Product | null> {
+export function getProductById(id: string): Promise<Product | null> {
+  return memo(`product:${id}`, 3 * 60_000, () => fetchProductById(id));
+}
+
+async function fetchProductById(id: string): Promise<Product | null> {
   if (!supabase) return null;
 
   const [{ data, error }, categories] = await Promise.all([
@@ -288,7 +296,11 @@ export async function getProductById(id: string): Promise<Product | null> {
 
 // Related products, filtered server-side by the resolved category id rather
 // than fetching every product and filtering by category name in JS.
-export async function getRelatedProducts(categoryName: string, excludeId: string, limit = 4): Promise<Product[]> {
+export function getRelatedProducts(categoryName: string, excludeId: string, limit = 4): Promise<Product[]> {
+  return memo(`related:${categoryName}:${excludeId}:${limit}`, 5 * 60_000, () => fetchRelatedProducts(categoryName, excludeId, limit));
+}
+
+async function fetchRelatedProducts(categoryName: string, excludeId: string, limit: number): Promise<Product[]> {
   if (!supabase) return [];
 
   const categories = await getCategories();
