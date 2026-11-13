@@ -5,29 +5,14 @@ import { SiteHeader } from "@/components/site-header";
 import { CategorySidebar } from "@/components/category-sidebar";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
-import { getCategories, getProducts, getProductsPage } from "@/lib/storefront-data-server";
+import { getCategories, getProductsByIds, getProductsPage, getSearchIndex } from "@/lib/storefront-data-server";
 import { ProductCard } from "@/components/product-card";
 import { MetaSearchTracker } from "@/components/meta-search-tracker";
 import { ProductFiltersBar, type SortValue } from "@/components/product-filters-bar";
 import { matchesSearch } from "@/lib/search";
-import { productMatchesNames, resolveCategoryProductIds, resolveCategoryProductNames, type Product } from "@/lib/storefront-data";
+import { resolveCategoryProductIds, type Product } from "@/lib/storefront-data";
 
 const PAGE_SIZE = 12;
-
-function sortProducts(products: Product[], sort: SortValue): Product[] {
-  switch (sort) {
-    case "price_asc":
-      return [...products].sort((a, b) => a.price - b.price);
-    case "price_desc":
-      return [...products].sort((a, b) => b.price - a.price);
-    case "name_asc":
-      return [...products].sort((a, b) => a.name.localeCompare(b.name));
-    case "newest":
-    default:
-      // getProducts() already returns newest-active-product-first.
-      return products;
-  }
-}
 
 export default async function ProductsPage({
   searchParams,
@@ -39,8 +24,9 @@ export default async function ProductsPage({
   const startedAt = performance.now();
   const searchTerm = params.search?.trim().toLowerCase() ?? "";
   // Browsing (no search) loads just the current page from the database. Search
-  // needs Arabic-aware matching, so it scans the full active catalog instead.
-  const [categories, allProducts] = await Promise.all([getCategories(), searchTerm ? getProducts() : Promise.resolve<Product[]>([])]);
+  // needs Arabic-aware matching, so it matches against a small cached index and
+  // then loads only the 12 products on the current page.
+  const [categories, searchIndex] = await Promise.all([getCategories(), searchTerm ? getSearchIndex().catch(() => []) : Promise.resolve([])]);
   if (process.env.NODE_ENV !== "production") console.debug(`[perf] route render /products: ${(performance.now() - startedAt).toFixed(0)}ms`);
 
   const categorySlug = params.category ?? "";
@@ -57,18 +43,20 @@ export default async function ProductsPage({
   let pageProducts: Product[];
 
   if (searchTerm) {
-    const matchNames = resolveCategoryProductNames(categories, categorySlug, subcategorySlug);
-    let filtered = allProducts;
-    if (matchNames) {
-      filtered = filtered.filter((product) => productMatchesNames(product, matchNames));
-    }
-    filtered = filtered.filter((product) =>
-      matchesSearch(searchTerm, product.name, product.description, product.category),
+    const categoryIds = resolveCategoryProductIds(categories, categorySlug, subcategorySlug);
+    const categoryName = new Map(categories.map((category) => [category.id, category.name]));
+    const matches = searchIndex.filter(
+      (entry) =>
+        (!categoryIds || (entry.categoryId !== null && categoryIds.includes(entry.categoryId))) &&
+        matchesSearch(searchTerm, entry.name, entry.description, entry.categoryId ? categoryName.get(entry.categoryId) : "Accessories"),
     );
-    const sorted = sortProducts(filtered, sort);
-    totalCount = sorted.length;
+    if (sort === "price_asc") matches.sort((a, b) => a.price - b.price);
+    else if (sort === "price_desc") matches.sort((a, b) => b.price - a.price);
+    else if (sort === "name_asc") matches.sort((a, b) => a.name.localeCompare(b.name));
+    // "newest": the index is already newest-first.
+    totalCount = matches.length;
     safePage = Math.min(page, Math.max(1, Math.ceil(totalCount / PAGE_SIZE)));
-    pageProducts = sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+    pageProducts = await getProductsByIds(matches.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE).map((entry) => entry.id));
   } else {
     const result = await getProductsPage({
       categoryIds: resolveCategoryProductIds(categories, categorySlug, subcategorySlug),

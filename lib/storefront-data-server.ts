@@ -1,4 +1,5 @@
 import { fetchAllRows } from "@/lib/supabase-paging";
+import { memo } from "@/lib/memo-cache";
 import { createClient } from "@supabase/supabase-js";
 import type { Category, Product, ProductColor } from "@/lib/storefront-data";
 
@@ -40,7 +41,11 @@ const CATEGORY_IMAGE_FALLBACKS: Record<string, string> = {
 // category-name resolution), getBestSellers(), getProductById(), and
 // getRelatedProducts() all reuse this instead of each querying "categories"
 // separately.
-export async function getCategories(): Promise<Category[]> {
+export function getCategories(): Promise<Category[]> {
+  return memo("categories", 5 * 60_000, fetchCategories);
+}
+
+async function fetchCategories(): Promise<Category[]> {
   if (!supabase) return [];
 
   const { data, error } = await supabase
@@ -86,7 +91,7 @@ type ProductRow = {
   original_price: number | null;
   image_url: string | null;
   category_id: string | null;
-  description: string | null;
+  description?: string | null;
   stock_quantity: number | null;
   has_sizes?: boolean | null;
   product_colors?: ColorRow[] | null;
@@ -124,7 +129,9 @@ function mapProductRow(item: ProductRow, categoryNames: Map<string, string>): Pr
   };
 }
 
-const BASE_PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, description, stock_quantity, has_sizes";
+// No `description` here: listings never show it, and it is the heaviest column.
+// Only the product detail page (and the search index) read it.
+const BASE_PRODUCT_FIELDS = "id, name, selling_price, original_price, image_url, category_id, stock_quantity, has_sizes";
 // Listings only need each color's name + main image for the card swatches —
 // the per-color extra images are fetched on the detail page alone.
 const PRODUCT_FIELDS = `${BASE_PRODUCT_FIELDS}, product_colors(id, name, image_url, sort_order)`;
@@ -191,8 +198,34 @@ export async function getProductsPage(options: { categoryIds: string[] | null; s
   return { products: (data ?? []).map((item) => mapProductRow(item, categoryNames)), total, page };
 }
 
+// Lean, cached index used only for search: just enough to match and sort, so a
+// keystroke never pulls full product rows. Rebuilt every 30 min or on admin edits.
+export type SearchIndexEntry = { id: string; categoryId: string | null; name: string; description: string; price: number; createdAt: string };
+
+export function getSearchIndex(): Promise<SearchIndexEntry[]> {
+  return memo("search-index", 30 * 60_000, async () => {
+    if (!supabase) return [];
+    const client = supabase;
+    const { data, error } = await fetchAllRows<{ id: string; name: string; description: string | null; category_id: string | null; selling_price: number | null; created_at: string }>((from, to) =>
+      client.from("products").select("id, name, description, category_id, selling_price, created_at").eq("is_active", true).order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to),
+    );
+    if (error || !data) throw new Error("search index failed");
+    return data.map((row) => ({ id: String(row.id), categoryId: row.category_id ? String(row.category_id) : null, name: row.name, description: row.description || "", price: Number(row.selling_price ?? 0), createdAt: row.created_at }));
+  });
+}
+
+// Full product cards for a specific list of ids (one search results page), in the given order.
+export async function getProductsByIds(ids: string[]): Promise<Product[]> {
+  if (!supabase || ids.length === 0) return [];
+  const [{ data, error }, categories] = await Promise.all([supabase.from("products").select(PRODUCT_FIELDS).eq("is_active", true).in("id", ids), getCategories()]);
+  if (error || !data) return [];
+  const categoryNames = new Map(categories.map((category) => [category.id, category.name]));
+  const byId = new Map(data.map((row) => [String(row.id), mapProductRow(row, categoryNames)]));
+  return ids.flatMap((id) => byId.get(id) ?? []);
+}
+
 export async function getProducts() {
-  return fetchCatalog();
+  return memo("catalog", 15 * 60_000, fetchCatalog);
 }
 
 async function fetchBestSellers(limit: number): Promise<Product[]> {
@@ -217,7 +250,7 @@ async function fetchBestSellers(limit: number): Promise<Product[]> {
 }
 
 export async function getBestSellers(limit = 5) {
-  return fetchBestSellers(limit);
+  return memo(`best-sellers:${limit}`, 5 * 60_000, () => fetchBestSellers(limit));
 }
 
 // Targeted single-product lookup — avoids fetching the (capped) general
@@ -226,7 +259,7 @@ export async function getProductById(id: string): Promise<Product | null> {
   if (!supabase) return null;
 
   const [{ data, error }, categories] = await Promise.all([
-    supabase.from("products").select(`${BASE_PRODUCT_FIELDS}, images, videos, product_colors(id, name, image_url, images, videos, sort_order), product_sizes(id, label, sort_order)`).eq("id", id).eq("is_active", true).maybeSingle(),
+    supabase.from("products").select(`${BASE_PRODUCT_FIELDS}, description, images, videos, product_colors(id, name, image_url, images, videos, sort_order), product_sizes(id, label, sort_order)`).eq("id", id).eq("is_active", true).maybeSingle(),
     getCategories(),
   ]);
 

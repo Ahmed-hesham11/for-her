@@ -37,11 +37,13 @@ import { ORDER_STATUS_LABELS_AR, PAYMENT_STATUS_LABELS_AR } from "@/lib/admin/st
 import { createSupplier, updateSupplier, type SupplierInput } from "@/lib/admin/suppliers";
 import { setUserRole } from "@/lib/admin/users";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { clearMemoCache } from "@/lib/memo-cache";
 import { resolveUploadPath } from "@/lib/uploads";
 
 // The storefront caches its catalog for 60s; drop that cache right after an
 // admin change so the shop and the admin panel never disagree.
 function refreshStorefront() {
+  clearMemoCache();
   revalidateTag("storefront-catalog");
   revalidatePath("/", "layout");
 }
