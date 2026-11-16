@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { formatDate } from "@/lib/format-date";
 
 type OrderItem = {
   id: string;
@@ -64,7 +65,7 @@ export default async function OrderDetailPage({
           <h1 className="brand-serif text-[3rem] leading-none text-[#1d1918]">
             #{order.order_number ?? order.id.slice(0, 8)}
           </h1>
-          <p className="mt-2 text-sm text-[#786d6a]">{t.orderDetail.placedOn(new Date(order.created_at).toLocaleDateString())}</p>
+          <p className="mt-2 text-sm text-[#786d6a]">{t.orderDetail.placedOn(formatDate(order.created_at))}</p>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">

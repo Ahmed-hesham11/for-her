@@ -1,6 +1,7 @@
 import { WhatsAppIcon } from "@/components/icons";
 import type { AdminOrderDetail, AdminOrderItem } from "@/lib/admin/orders";
 import { formatEgp } from "@/lib/currency";
+import { formatDate } from "@/lib/format-date";
 
 // The store's own WhatsApp contact number (same one in the site footer's
 // social links) — printed on the invoice so the courier/customer has a
@@ -23,7 +24,7 @@ export function InvoiceSheet({ order, items, className = "" }: { order: AdminOrd
         </div>
         <div className="text-left text-sm text-[#4a4442]">
           <p className="font-semibold text-[#221d1b]">طلب #{order.order_number ?? order.id.slice(0, 8)}</p>
-          <p className="text-[#8a7c78]">{new Date(order.created_at).toLocaleDateString()}</p>
+          <p className="text-[#8a7c78]">{formatDate(order.created_at)}</p>
         </div>
       </div>
 

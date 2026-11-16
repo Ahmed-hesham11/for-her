@@ -1,6 +1,7 @@
 import { AdminTable } from "@/components/admin/admin-table";
 import { EmptyState } from "@/components/admin/empty-state";
 import { AUDIT_ENTITY_LABELS_AR, type AuditLogEntry } from "@/lib/admin/audit";
+import { formatDateTime } from "@/lib/format-date";
 
 export function AuditLogTable({ entries }: { entries: AuditLogEntry[] }) {
   if (entries.length === 0) {
@@ -12,7 +13,7 @@ export function AuditLogTable({ entries }: { entries: AuditLogEntry[] }) {
       {entries.map((entry) => (
         <tr key={entry.id}>
           <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">
-            {new Date(entry.created_at).toLocaleString("ar-EG", { dateStyle: "medium", timeStyle: "short" })}
+            {formatDateTime(entry.created_at)}
           </td>
           <td className="whitespace-nowrap px-4 py-3">
             <span className="inline-flex items-center rounded-full bg-[#f2e7df] px-3 py-1 text-[0.7rem] font-medium text-[#4a4442]">

@@ -11,6 +11,7 @@ import { PrintLinkButton } from "@/components/admin/print-link-button";
 import { PrintIcon } from "@/components/icons";
 import type { AdminOrderListItem } from "@/lib/admin/orders";
 import { formatEgp } from "@/lib/currency";
+import { formatDate } from "@/lib/format-date";
 
 export function OrdersTable({ orders }: { orders: AdminOrderListItem[] }) {
   const router = useRouter();
@@ -72,7 +73,7 @@ export function OrdersTable({ orders }: { orders: AdminOrderListItem[] }) {
               <p className="text-xs text-[#8a7c78]">{order.phone_1}</p>
               <p className="text-xs text-[#8a7c78]">{order.order_count > 1 ? `عميل متكرر — ${order.order_count} طلبات` : "طلب أول مرة"}</p>
             </td>
-            <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{new Date(order.created_at).toLocaleDateString()}</td>
+            <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{formatDate(order.created_at)}</td>
             <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{order.item_count}</td>
             <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{formatEgp(order.subtotal)}</td>
             <td className="whitespace-nowrap px-4 py-3 text-[#4a4442]">{formatEgp(order.discount)}</td>

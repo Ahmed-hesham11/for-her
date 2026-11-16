@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { getAdminCustomerDetail, getCustomerOrders } from "@/lib/admin/customers";
 import { formatEgp } from "@/lib/currency";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { formatDate } from "@/lib/format-date";
 
 export default async function AdminCustomerDetailPage({
   params,
@@ -33,7 +34,7 @@ export default async function AdminCustomerDetailPage({
           <Link href="/admin/customers" className="hover:text-[#1d1a19]">العملاء</Link> / {customer.full_name || customer.email}
         </p>
         <h1 className="brand-serif text-[2.6rem] leading-none text-[#1d1918]">{customer.full_name || "عميل بدون اسم"}</h1>
-        <p className="mt-1 text-sm text-[#8a7c78]">انضم في {new Date(customer.created_at).toLocaleDateString()}</p>
+        <p className="mt-1 text-sm text-[#8a7c78]">انضم في {formatDate(customer.created_at)}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -82,7 +83,7 @@ export default async function AdminCustomerDetailPage({
                         #{order.order_number ?? order.id.slice(0, 8)}
                       </Link>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{new Date(order.created_at).toLocaleDateString()}</td>
+                    <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{formatDate(order.created_at)}</td>
                     <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">{formatEgp(order.total_amount)}</td>
                     <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.payment_status} kind="payment" /></td>
                     <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.status} kind="order" /></td>

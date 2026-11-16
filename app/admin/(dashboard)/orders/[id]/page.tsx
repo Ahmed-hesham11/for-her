@@ -10,6 +10,7 @@ import { getAdminOrderById } from "@/lib/admin/orders";
 import { ORDER_SOURCE_LABELS_AR } from "@/lib/admin/status-labels-ar";
 import { formatEgp } from "@/lib/currency";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { formatDateTime } from "@/lib/format-date";
 
 export default async function AdminOrderDetailPage({
   params,
@@ -38,7 +39,7 @@ export default async function AdminOrderDetailPage({
             <Link href="/admin/orders" className="hover:text-[#1d1a19]">الطلبات</Link> / #{order.order_number ?? order.id.slice(0, 8)}
           </p>
           <h1 className="brand-serif text-[2.6rem] leading-none text-[#1d1918]">طلب #{order.order_number ?? order.id.slice(0, 8)}</h1>
-          <p className="mt-1 text-sm text-[#8a7c78]">تم الطلب في {new Date(order.created_at).toLocaleString()}</p>
+          <p className="mt-1 text-sm text-[#8a7c78]">تم الطلب في {formatDateTime(order.created_at)}</p>
         </div>
         <a
           href={`/admin/orders/${order.id}/print`}

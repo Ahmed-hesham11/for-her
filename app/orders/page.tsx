@@ -7,6 +7,7 @@ import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
 import { formatEgp } from "@/lib/currency";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { formatDate } from "@/lib/format-date";
 
 type Order = {
   id: string;
@@ -57,7 +58,7 @@ export default async function OrdersPage() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <p className="text-[0.72rem] uppercase tracking-[0.18em] text-[#786d6a]">{t.orders.orderNumber(order.order_number ?? order.id.slice(0, 8))}</p>
-                    <p className="mt-2 text-sm text-[#5f5451]">{t.orders.placedOn(new Date(order.created_at).toLocaleDateString())}</p>
+                    <p className="mt-2 text-sm text-[#5f5451]">{t.orders.placedOn(formatDate(order.created_at))}</p>
                   </div>
                   <div className="flex flex-wrap gap-4 text-sm text-[#4d4543]">
                     <span>{t.orders.totalLabel(formatEgp(order.total_amount))}</span>

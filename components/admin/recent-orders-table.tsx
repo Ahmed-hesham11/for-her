@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/admin/empty-state";
 import { StatusBadge } from "@/components/admin/status-badge";
 import type { RecentOrder } from "@/lib/admin/data";
 import { formatEgp } from "@/lib/currency";
+import { formatDate } from "@/lib/format-date";
 
 export function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
   const router = useRouter();
@@ -24,7 +25,7 @@ export function RecentOrdersTable({ orders }: { orders: RecentOrder[] }) {
         >
           <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">#{order.order_number ?? order.id.slice(0, 8)}</td>
           <td className="px-4 py-3 text-[#4a4442]">{order.customer_name}</td>
-          <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{new Date(order.created_at).toLocaleDateString()}</td>
+          <td className="whitespace-nowrap px-4 py-3 text-[#8a7c78]">{formatDate(order.created_at)}</td>
           <td className="whitespace-nowrap px-4 py-3 font-medium text-[#221d1b]">{formatEgp(order.total_amount)}</td>
           <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.payment_status} kind="payment" /></td>
           <td className="whitespace-nowrap px-4 py-3"><StatusBadge status={order.status} kind="order" /></td>
