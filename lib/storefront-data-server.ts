@@ -164,7 +164,7 @@ export type CatalogSort = "newest" | "price_asc" | "price_desc" | "name_asc";
 // One page of the active catalog, filtered/sorted/paginated in the database so
 // browsing pages only ever loads `pageSize` products instead of all of them.
 export function getProductsPage(options: { categoryIds: string[] | null; sort: CatalogSort; page: number; pageSize: number }): Promise<{ products: Product[]; total: number; page: number }> {
-  return memo(`page:${JSON.stringify(options)}`, 3 * 60_000, () => fetchProductsPage(options));
+  return memo(`page:${JSON.stringify(options)}`, 10 * 60_000, () => fetchProductsPage(options));
 }
 
 async function fetchProductsPage(options: { categoryIds: string[] | null; sort: CatalogSort; page: number; pageSize: number }): Promise<{ products: Product[]; total: number; page: number }> {
@@ -203,11 +203,11 @@ async function fetchProductsPage(options: { categoryIds: string[] | null; sort: 
 }
 
 // Lean, cached index used only for search: just enough to match and sort, so a
-// keystroke never pulls full product rows. Rebuilt every 30 min or on admin edits.
+// keystroke never pulls full product rows. Rebuilt every 2 h or on admin edits.
 export type SearchIndexEntry = { id: string; categoryId: string | null; name: string; description: string; price: number; createdAt: string };
 
 export function getSearchIndex(): Promise<SearchIndexEntry[]> {
-  return memo("search-index", 30 * 60_000, async () => {
+  return memo("search-index", 2 * 60 * 60_000, async () => {
     if (!supabase) return [];
     const client = supabase;
     const { data, error } = await fetchAllRows<{ id: string; name: string; description: string | null; category_id: string | null; selling_price: number | null; created_at: string }>((from, to) =>
@@ -228,8 +228,22 @@ export async function getProductsByIds(ids: string[]): Promise<Product[]> {
   return ids.flatMap((id) => byId.get(id) ?? []);
 }
 
+// Ids only, for the sitemap: the full catalog rows (images, colors) are ~1MB
+// and the sitemap needs none of it.
+export function getActiveProductIds(): Promise<string[]> {
+  return memo("product-ids", 6 * 60 * 60_000, async () => {
+    if (!supabase) return [];
+    const client = supabase;
+    const { data, error } = await fetchAllRows<{ id: string }>((from, to) =>
+      client.from("products").select("id").eq("is_active", true).order("created_at", { ascending: false }).order("id", { ascending: true }).range(from, to),
+    );
+    if (error || !data) throw new Error("product ids failed");
+    return data.map((row) => String(row.id));
+  });
+}
+
 export async function getProducts() {
-  return memo("catalog", 15 * 60_000, fetchCatalog);
+  return memo("catalog", 60 * 60_000, fetchCatalog);
 }
 
 async function fetchBestSellers(limit: number): Promise<Product[]> {
@@ -260,7 +274,7 @@ export async function getBestSellers(limit = 5) {
 // Targeted single-product lookup — avoids fetching the (capped) general
 // catalog just to find one product by id.
 export function getProductById(id: string): Promise<Product | null> {
-  return memo(`product:${id}`, 3 * 60_000, () => fetchProductById(id));
+  return memo(`product:${id}`, 10 * 60_000, () => fetchProductById(id));
 }
 
 async function fetchProductById(id: string): Promise<Product | null> {
@@ -297,7 +311,7 @@ async function fetchProductById(id: string): Promise<Product | null> {
 // Related products, filtered server-side by the resolved category id rather
 // than fetching every product and filtering by category name in JS.
 export function getRelatedProducts(categoryName: string, excludeId: string, limit = 4): Promise<Product[]> {
-  return memo(`related:${categoryName}:${excludeId}:${limit}`, 5 * 60_000, () => fetchRelatedProducts(categoryName, excludeId, limit));
+  return memo(`related:${categoryName}:${excludeId}:${limit}`, 30 * 60_000, () => fetchRelatedProducts(categoryName, excludeId, limit));
 }
 
 async function fetchRelatedProducts(categoryName: string, excludeId: string, limit: number): Promise<Product[]> {
