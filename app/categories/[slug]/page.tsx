@@ -7,14 +7,15 @@ import { SiteHeader } from "@/components/site-header";
 import { getLocale } from "@/lib/i18n/get-locale";
 import { getDictionary } from "@/lib/i18n/translations";
 import { getCategories } from "@/lib/storefront-data-server";
+import { decodeParam } from "@/lib/search";
 
 export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const category = (await getCategories()).find((item) => item.slug === slug.toLowerCase());
+  const category = (await getCategories()).find((item) => item.slug === decodeParam(slug).toLowerCase());
   if (!category) return {};
-  return { title: category.name, alternates: { canonical: `/categories/${category.slug}` } };
+  return { title: category.name, alternates: { canonical: `/categories/${encodeURIComponent(category.slug)}` } };
 }
 
 export default async function CategoryHubPage({
@@ -24,7 +25,7 @@ export default async function CategoryHubPage({
 }) {
   const t = getDictionary(await getLocale());
   const { slug } = await params;
-  const normalized = slug.toLowerCase();
+  const normalized = decodeParam(slug).toLowerCase();
   const categories = await getCategories();
 
   const category = categories.find((item) => item.slug === normalized);
@@ -38,7 +39,7 @@ export default async function CategoryHubPage({
   // a plain category has no subcategories, so send it to the normal product
   // listing instead, keeping the flat category system untouched.
   if (subcategories.length === 0) {
-    redirect(`/products?category=${category.slug}`);
+    redirect(`/products?category=${encodeURIComponent(category.slug)}`);
   }
 
   return (
@@ -56,7 +57,7 @@ export default async function CategoryHubPage({
 
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4">
           {subcategories.map((sub) => (
-            <CategoryCard key={sub.id} category={sub} href={`/categories/${category.slug}/${sub.slug}`} />
+            <CategoryCard key={sub.id} category={sub} href={`/categories/${encodeURIComponent(category.slug)}/${encodeURIComponent(sub.slug)}`} />
           ))}
         </div>
       </main>

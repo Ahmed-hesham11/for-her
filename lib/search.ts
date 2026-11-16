@@ -29,3 +29,9 @@ export function matchesSearch(query: string, ...fields: (string | null | undefin
 export function sanitizeForPostgrest(term: string): string {
   return term.replace(/[,()%*\\"]/g, " ").replace(/\s+/g, " ").trim();
 }
+
+// Dynamic route params arrive percent-encoded when they hold non-ASCII text
+// (Arabic, emoji); decode before comparing against stored slugs.
+export function decodeParam(value: string): string {
+  try { return decodeURIComponent(value); } catch { return value; }
+}

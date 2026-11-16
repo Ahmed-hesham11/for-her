@@ -10,6 +10,7 @@ import { getDictionary } from "@/lib/i18n/translations";
 import { SOCIAL_LINKS } from "@/lib/social-links";
 import { getCategories, getProducts } from "@/lib/storefront-data-server";
 import { productMatchesNames, resolveCategoryProductNames } from "@/lib/storefront-data";
+import { decodeParam } from "@/lib/search";
 
 const routeTypes: Record<string, "category" | "collection" | "info"> = {
   jewelry: "category",
@@ -39,7 +40,7 @@ export default async function DynamicCollectionPage({
 }) {
   const t = getDictionary(await getLocale());
   const { slug } = await params;
-  const normalized = slug.toLowerCase();
+  const normalized = decodeParam(slug).toLowerCase();
   const routeType = routeTypes[normalized];
   const route = t.routeCatalog[normalized];
 

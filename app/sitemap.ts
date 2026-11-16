@@ -21,7 +21,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // redirect to /products?category=…, which isn't worth indexing.
     ...categories
       .filter((category) => parentIds.has(category.id))
-      .map((category) => ({ url: `${siteUrl}/categories/${category.slug}`, changeFrequency: "weekly" as const, priority: 0.6 })),
+      .map((category) => ({ url: `${siteUrl}/categories/${encodeURIComponent(category.slug)}`, changeFrequency: "weekly" as const, priority: 0.6 })),
     ...productIds.map((id) => ({ url: `${siteUrl}/product/${id}`, changeFrequency: "weekly" as const, priority: 0.8 })),
   ];
 }

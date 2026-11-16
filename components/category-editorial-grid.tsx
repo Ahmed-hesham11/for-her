@@ -24,7 +24,7 @@ export function CategoryEditorialGrid({ categories, allCategories }: { categorie
         return (
           <Link
             key={category.id}
-            href={isFeatured ? `/categories/${category.slug}` : `/products?category=${category.slug}`}
+            href={isFeatured ? `/categories/${encodeURIComponent(category.slug)}` : `/products?category=${encodeURIComponent(category.slug)}`}
             className={`group relative block overflow-hidden rounded-[16px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a06f5c] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f8f2ee] ${isFeatured ? "col-span-2 row-span-2" : ""}`}
           >
             <Image
