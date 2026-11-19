@@ -189,17 +189,24 @@ export function ProductForm({
       // Images only actually upload here, on save — not the moment they
       // were picked in the fields above.
       const resolvedImages = await uploadPendingSlots(imageSlots, uploaded);
-      const resolvedColors: ColorDraft[] = [];
-      for (const color of colorDrafts) {
-        resolvedColors.push({
-          ...color,
-          name: color.name.trim(),
-          slots: await uploadPendingSlots(color.slots, uploaded),
-          videoSlots: await uploadVideoSlots(color.videoSlots, uploaded),
-        });
-      }
-
-      const resolvedVideoSlots = await uploadVideoSlots(videoSlots, uploaded);
+      // Product videos and every color's images/videos upload in parallel; all
+      // are awaited (allSettled) so files from the successful ones are still
+      // recorded in `uploaded` for cleanup if one of them fails.
+      const settled = await Promise.allSettled([
+        uploadVideoSlots(videoSlots, uploaded),
+        ...colorDrafts.map(async (color): Promise<ColorDraft> => {
+          const [slots, colorVideoSlots] = await Promise.all([
+            uploadPendingSlots(color.slots, uploaded),
+            uploadVideoSlots(color.videoSlots, uploaded),
+          ]);
+          return { ...color, name: color.name.trim(), slots, videoSlots: colorVideoSlots };
+        }),
+      ]);
+      const rejected = settled.find((result) => result.status === "rejected");
+      if (rejected) throw (rejected as PromiseRejectedResult).reason;
+      const [videosResult, ...colorResults] = settled as PromiseFulfilledResult<VideoSlot[] | ColorDraft>[];
+      const resolvedVideoSlots = videosResult.value as VideoSlot[];
+      const resolvedColors = colorResults.map((result) => result.value as ColorDraft);
 
       const { image_url, images } = splitMainAndExtras(resolvedImages);
       const submitFields: ProductInput = {

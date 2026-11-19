@@ -66,7 +66,8 @@ export async function POST(request: NextRequest) {
   const url = `${origin}/uploads/${folder}/${fileName}`;
 
   if (supabaseAdmin) {
-    await logAdminAction(supabaseAdmin, profile, {
+    // Not awaited: the audit row shouldn't hold up the response.
+    void logAdminAction(supabaseAdmin, profile, {
       action: "upload",
       entity_type: isVideo ? "video" : "image",
       entity_id: null,

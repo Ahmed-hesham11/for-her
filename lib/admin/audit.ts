@@ -34,16 +34,25 @@ export async function logAdminAction(
   actor: { id: string; full_name: string; role: string },
   entry: { action: string; entity_type: string; entity_id: string | null; summary: string },
 ): Promise<void> {
-  const { error } = await supabase.from("admin_audit_log").insert({
-    actor_id: actor.id,
-    actor_name: actor.full_name || "—",
-    actor_role: actor.role,
-    action: entry.action,
-    entity_type: entry.entity_type,
-    entity_id: entry.entity_id,
-    summary: entry.summary,
-  });
-  if (error) console.error("admin_audit_log insert failed:", error.message);
+  // Fire-and-forget: the audit row is written in the background so every admin
+  // action (save product, update order, upload...) returns one Supabase round
+  // trip sooner instead of waiting on a log insert.
+  void Promise.resolve(
+    supabase.from("admin_audit_log").insert({
+      actor_id: actor.id,
+      actor_name: actor.full_name || "—",
+      actor_role: actor.role,
+      action: entry.action,
+      entity_type: entry.entity_type,
+      entity_id: entry.entity_id,
+      summary: entry.summary,
+    }),
+  ).then(
+    ({ error }) => {
+      if (error) console.error("admin_audit_log insert failed:", error.message);
+    },
+    (error: unknown) => console.error("admin_audit_log insert failed:", error),
+  );
 }
 
 export async function getAdminAuditLog(

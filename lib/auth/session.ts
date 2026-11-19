@@ -29,7 +29,7 @@ export const ADMIN_SESSION_HEADER = "x-admin-session-user";
 export function parseAdminSessionHeader(value: string | null): SessionProfile | null {
   if (!value) return null;
   try {
-    const parsed = JSON.parse(value);
+    const parsed = JSON.parse(decodeURIComponent(value));
     if (parsed && typeof parsed.id === "string" && typeof parsed.role === "string") return parsed as SessionProfile;
   } catch {
     // fall through

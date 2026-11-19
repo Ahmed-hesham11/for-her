@@ -30,18 +30,20 @@ export function splitMainAndExtras(slots: ImageSlot[]): { image_url: string; ima
 // real URLs (empty slots dropped). Each newly uploaded URL is also pushed to
 // `uploaded` so the caller can discard those files if the save fails later.
 export async function uploadPendingSlots(slots: ImageSlot[], uploaded: string[]): Promise<ImageSlot[]> {
-  const resolved: ImageSlot[] = [];
-  for (const slot of slots) {
-    if (slot.file) {
+  // Uploaded in parallel (order is preserved). Every upload is awaited before
+  // throwing so files from the successful ones are all recorded in `uploaded`.
+  const results = await Promise.all(
+    slots.map(async (slot): Promise<{ slot: ImageSlot | null; error: string | null }> => {
+      if (!slot.file) return { slot: slot.url.trim() ? slot : null, error: null };
       const { url, error } = await uploadMedia(slot.file, "products");
-      if (error || !url) throw new Error(error ?? "تعذّر رفع إحدى الصور الآن.");
+      if (error || !url) return { slot: null, error: error ?? "تعذّر رفع إحدى الصور الآن." };
       uploaded.push(url);
-      resolved.push({ ...slot, url, file: null, previewUrl: null });
-    } else if (slot.url.trim()) {
-      resolved.push(slot);
-    }
-  }
-  return resolved;
+      return { slot: { ...slot, url, file: null, previewUrl: null }, error: null };
+    }),
+  );
+  const failed = results.find((result) => result.error);
+  if (failed) throw new Error(failed.error ?? "تعذّر رفع إحدى الصور الآن.");
+  return results.flatMap((result) => (result.slot ? [result.slot] : []));
 }
 
 const SMALL_BUTTON = "rounded-full border border-[#e4d4cd] bg-white px-2.5 py-1 text-[0.64rem] font-medium text-[#4a4442] transition hover:bg-[#f2e7df] disabled:cursor-not-allowed disabled:opacity-40";

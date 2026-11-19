@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { memo } from "@/lib/memo-cache";
 
 export type OrderStatus = "pending" | "processing" | "shipped" | "delivered" | "cancelled";
 
@@ -172,21 +173,31 @@ function isoDate(date: Date): string {
 // PostgREST caps a single response (1000 rows by default).
 async function getAllTimeRevenue(supabase: SupabaseClient, errors?: string[]): Promise<number> {
   const pageSize = 1000;
-  let total = 0;
-
-  for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
+  const fetchPage = (from: number) =>
+    supabase
       .from("orders")
-      .select("total_amount")
+      .select("total_amount", { count: "exact" })
       .neq("status", "cancelled")
       .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
 
-    trackError(errors, "All-time revenue", error);
-    if (error || !data) break;
+  const sumPage = (rows: { total_amount: number | string }[] | null) => (rows ?? []).reduce((sum, row) => sum + Number(row.total_amount), 0);
 
-    total += data.reduce((sum, row) => sum + Number(row.total_amount), 0);
-    if (data.length < pageSize) break;
+  const first = await fetchPage(0);
+  trackError(errors, "All-time revenue", first.error);
+  if (first.error || !first.data) return 0;
+
+  let total = sumPage(first.data);
+
+  // Remaining pages are fetched in parallel instead of one after another, so
+  // the dashboard no longer waits on N sequential round trips to Supabase.
+  const remaining = Math.max(0, (first.count ?? first.data.length) - pageSize);
+  const pageStarts = Array.from({ length: Math.ceil(remaining / pageSize) }, (_, index) => (index + 1) * pageSize);
+  const pages = await Promise.all(pageStarts.map(fetchPage));
+  for (const page of pages) {
+    trackError(errors, "All-time revenue", page.error);
+    total += sumPage(page.data);
   }
 
   return Math.round(total * 100) / 100;
@@ -202,7 +213,16 @@ function defaultRange(): { from: string; to: string } {
   return { from: isoDate(from), to: isoDate(to) };
 }
 
-export async function getDashboardOverview(supabase: SupabaseClient, range?: { from?: string; to?: string }): Promise<DashboardOverview> {
+// The dashboard runs ~8 Supabase calls (some scan every order), so cache the
+// result briefly: repeat visits and several admins at once reuse one load
+// instead of each hammering the database until the request times out (504).
+// Admin writes call clearMemoCache(), so edits still show up immediately.
+export function getDashboardOverview(supabase: SupabaseClient, range?: { from?: string; to?: string }): Promise<DashboardOverview> {
+  const today = isoDate(new Date());
+  return memo(`admin:dashboard:${range?.from ?? ""}:${range?.to ?? ""}:${today}`, 60_000, () => loadDashboardOverview(supabase, range));
+}
+
+async function loadDashboardOverview(supabase: SupabaseClient, range?: { from?: string; to?: string }): Promise<DashboardOverview> {
   const errors: string[] = [];
   const defaults = defaultRange();
   const resolvedRange = { from: range?.from || defaults.from, to: range?.to || defaults.to };

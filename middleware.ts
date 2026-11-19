@@ -28,7 +28,9 @@ export async function middleware(request: NextRequest) {
   // layout, admin print pages, every admin Server Action) doesn't repeat
   // the same session+profile lookup this request already did.
   const requestHeaders = new Headers(request.headers);
-  requestHeaders.set(ADMIN_SESSION_HEADER, JSON.stringify(user));
+  // URI-encoded: header values must be Latin-1, and an Arabic full_name would
+  // otherwise make Headers.set() throw (-> 500 for that admin).
+  requestHeaders.set(ADMIN_SESSION_HEADER, encodeURIComponent(JSON.stringify(user)));
   return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
